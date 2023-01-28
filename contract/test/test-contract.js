@@ -11,6 +11,7 @@ import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
 import { makeZoeKit } from '@agoric/zoe';
 import { AmountMath } from '@agoric/ertp';
 
+// @ts-ignore
 const filename = new URL(import.meta.url).pathname;
 const dirname = path.dirname(filename);
 
