@@ -10,7 +10,7 @@ import { parseICS20TransferPacket, makeICS20TransferPacketAck, assertICS20Transf
 import { AmountMath, makeIssuerKit } from '@agoric/ertp';
 
 /**
- * Make a Pegasus public API.
+ * Make a IST Forwarder public API.
  *
  * @param {ZCF} zcf the Zoe Contract Facet
  * @param {ERef<BoardDepositFacet>} board where to find depositFacets by boardID
