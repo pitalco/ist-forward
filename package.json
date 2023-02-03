@@ -11,6 +11,7 @@
   ],
   "devDependencies": {
     "@endo/eslint-plugin": "^0.3.24",
+    "@endo/marshal": "^0.8.1",
     "@jessie.js/eslint-plugin": "^0.1.3",
     "ava": "^4.3.1",
     "eslint": "^7.32.0",
@@ -26,7 +27,8 @@
     "eslint-plugin-react-hooks": "^4.3.0",
     "prettier": "^2.7.1",
     "@agoric/solo": "beta",
-    "@agoric/cosmic-swingset": "beta"
+    "@agoric/cosmic-swingset": "beta",
+    "@agoric/store": "^0.8.4"
   },
   "scripts": {
     "preinstall": "node -e \"process.env.AGORIC_INSTALL && process.exit(0); console.warn('please use: agoric install . For details, see https://agoric.com/documentation/'); process.exit(1)\"",

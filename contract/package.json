@@ -30,10 +30,11 @@
     "@agoric/ertp": "beta",
     "@endo/eventual-send": "^0.14.8",
     "@endo/init": "^0.5.37",
-    "@endo/marshal": "^0.6.9",
+    "@endo/marshal": "^0.8.1",
     "@agoric/notifier": "beta",
-    "@agoric/store": "beta",
-    "@agoric/zoe": "beta"
+    "@agoric/store": "^0.8.4",
+    "@agoric/zoe": "beta",
+    "@agoric/pegasus": "^0.7.7"
   },
   "ava": {
     "files": [
