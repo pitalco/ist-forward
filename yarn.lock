@@ -130,7 +130,7 @@
     "@endo/marshal" "^0.6.7"
     "@endo/promise-kit" "^0.2.41"
 
-"@agoric/pegasus@^0.7.2":
+"@agoric/pegasus@^0.7.2", "@agoric/pegasus@beta":
   version "0.7.2"
   resolved "https://registry.yarnpkg.com/@agoric/pegasus/-/pegasus-0.7.2.tgz#88da8f9a4f7fda2382b72879da13ae04b11553b2"
   integrity sha512-iFcw9l8EMt+1K92md4G3QT61J9ieCgkBbSWoNyHIeuceFXtzAmfsM5O5E44XGTqqBoYjJcixHBCmPS/sOtX1Wg==
