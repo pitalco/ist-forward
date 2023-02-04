@@ -11,12 +11,13 @@ import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
 import { makeZoeKit } from '@agoric/zoe';
 import { AmountMath } from '@agoric/ertp';
 
+// @ts-ignore
 const filename = new URL(import.meta.url).pathname;
 const dirname = path.dirname(filename);
 
 const contractPath = `${dirname}/../src/contract.js`;
 
-test('zoe - mint payments', async (t) => {
+test('zoe - forward to psm', async (t) => {
   const { zoeService } = makeZoeKit(makeFakeVatAdmin().admin);
   const feePurse = E(zoeService).makeFeePurse();
   const zoe = E(zoeService).bindDefaultFeePurse(feePurse);

@@ -1,6 +1,7 @@
 // @ts-check
 /* global harden */
 import '@agoric/zoe/exported.js';
+import '@agoric/swingset-vat/src/vats/network';
 import { Far } from '@endo/marshal/src/make-far';
 import { E } from '@endo/eventual-send';
 import { makeScalarMapStore } from '@agoric/store';

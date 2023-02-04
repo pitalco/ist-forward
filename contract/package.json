@@ -34,7 +34,8 @@
     "@agoric/notifier": "beta",
     "@agoric/store": "beta",
     "@agoric/zoe": "beta",
-    "@agoric/pegasus": "beta"
+    "@agoric/pegasus": "beta",
+    "@agoric/swingset-vat": "beta"
   },
   "ava": {
     "files": [

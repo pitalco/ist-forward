@@ -246,7 +246,7 @@
     node-lmdb "^0.9.5"
     tmp "^0.2.1"
 
-"@agoric/swingset-vat@^0.28.0":
+"@agoric/swingset-vat@^0.28.0", "@agoric/swingset-vat@beta":
   version "0.28.0"
   resolved "https://registry.yarnpkg.com/@agoric/swingset-vat/-/swingset-vat-0.28.0.tgz#fc53271c93acb64d9d791f66af1a3dbd5c4ebdb7"
   integrity sha512-Wfs3iQYvy7VFPcwti1SxuI5Upb815uOrJBAP+CH7vTMGbTU6T+1FlZbBICdBcV9qc7NjhCggiGLt6Mmwuk+AUA==
