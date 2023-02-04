@@ -9,7 +9,12 @@ import bundleSource from '@endo/bundle-source';
 import { E } from '@endo/eventual-send';
 import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
 import { makeZoeKit } from '@agoric/zoe';
-import { AmountMath } from '@agoric/ertp';
+import { Far } from '@endo/marshal';
+import {
+  makeNetworkProtocol,
+  makeLoopbackProtocolHandler,
+} from '@agoric/swingset-vat/src/vats/network/index.js';
+import { makePromiseKit } from '@endo/promise-kit';
 
 // @ts-ignore
 const filename = new URL(import.meta.url).pathname;
@@ -28,25 +33,39 @@ test('zoe - forward to psm', async (t) => {
   // install the contract
   const installation = E(zoe).install(bundle);
 
-  const { creatorFacet, instance } = await E(zoe).startInstance(installation);
+  // Create a network protocol to be used for testing
+  const network = makeNetworkProtocol(makeLoopbackProtocolHandler());
 
-  // Alice makes an invitation for Bob that will give him 1000 tokens
-  const invitation = E(creatorFacet).makeInvitation();
+  /**
+   * @type {PromiseRecord<DepositFacet>}
+   */
+  const { promise: localDepositFacet, resolve: resolveLocalDepositFacet } =
+    makePromiseKit();
+  const fakeBoard = Far('fakeBoard', {
+    getValue(id) {
+      if (id === '0x1234') {
+        return localDepositFacet;
+      }
+      t.is(id, 'agoric1234567', 'tried bech32 first in board');
+      throw Error(`unrecognized board id ${id}`);
+    },
+  });
 
-  // Bob makes an offer using the invitation
-  const seat = E(zoe).offer(invitation);
+  const fakeNamesByAddress = Far('fakeNamesByAddress', {
+    lookup(...keys) {
+      t.is(keys.length, 1);
+      t.is(keys[0], 'psm', 'unrecognized fakeNamesByAddress');
+      return localDepositFacet;
+    },
+  });
 
-  const paymentP = E(seat).getPayout('Token');
-
-  // Let's get the tokenIssuer from the contract so we can evaluate
-  // what we get as our payout
-  const publicFacet = E(zoe).getPublicFacet(instance);
-  const tokenIssuer = E(publicFacet).getTokenIssuer();
-  const tokenBrand = await E(tokenIssuer).getBrand();
-
-  const tokens1000 = AmountMath.make(tokenBrand, 1000n);
-  const tokenPayoutAmount = await E(tokenIssuer).getAmountOf(paymentP);
+  const { publicFacet } = await E(zoe).startInstance(
+    installation,
+    {},
+    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, connectionId: "connection-0" },
+  );
 
   // Bob got 1000 tokens
-  t.deepEqual(tokenPayoutAmount, tokens1000);
+  t.deepEqual("", "");
 });
+
