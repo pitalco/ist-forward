@@ -1,12 +1,12 @@
 {
-  "name": "tester-contract",
-  "version": "0.1.0",
+  "name": "tester-api",
   "private": true,
-  "description": "Contract for the Agoric Dapp",
+  "version": "0.1.0",
+  "description": "Agoric Dapp web server handler",
   "type": "module",
   "scripts": {
     "build": "exit 0",
-    "test": "ava --verbose",
+    "test": "exit 0",
     "lint": "eslint '**/*.{js,jsx}'",
     "lint-fix": "eslint --fix '**/*.{js,jsx}'",
     "lint-check": "eslint '**/*.{js,jsx}'",
@@ -14,32 +14,28 @@
     "lint-check-jessie": "eslint -c '.eslintrc-jessie.js' '**/*.{js,jsx}'"
   },
   "devDependencies": {
-    "ava": "^4.3.1",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.0",
     "eslint-config-jessie": "^0.0.6",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "prettier": "^2.7.1"
+    "eslint-plugin-jsdoc": "^39.3.3",
+    "prettier": "^2.5.1"
   },
   "dependencies": {
-    "@endo/bundle-source": "^2.1.1",
-    "@agoric/assert": "beta",
-    "@agoric/deploy-script-support": "beta",
-    "@agoric/ertp": "beta",
-    "@endo/eventual-send": "^0.14.8",
-    "@endo/init": "^0.5.37",
+    "@endo/eventual-send": "^0.15.5",
     "@endo/marshal": "^0.6.9",
-    "@agoric/notifier": "beta",
-    "@agoric/store": "beta",
     "@agoric/zoe": "beta"
   },
-  "ava": {
-    "files": [
-      "test/**/test-*.js"
-    ],
-    "timeout": "10m"
+  "eslintConfig": {
+    "extends": [
+      "@agoric"
+    ]
+  },
+  "prettier": {
+    "trailingComma": "all",
+    "singleQuote": true
   },
   "keywords": [],
   "repository": {
@@ -51,17 +47,5 @@
   "bugs": {
     "url": "https://github.com/Agoric/agoric/issues"
   },
-  "homepage": "https://github.com/Agoric/agoric#readme",
-  "eslintConfig": {
-    "extends": [
-      "@agoric"
-    ]
-  },
-  "prettier": {
-    "trailingComma": "all",
-    "singleQuote": true
-  },
-  "eslintIgnore": [
-    "dappConstants.js"
-  ]
+  "homepage": "https://github.com/Agoric/agoric#readme"
 }
