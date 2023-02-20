@@ -32,7 +32,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
   const port = await E(network).bind('/ibc-port/transfer-psm');
 
   // logic to define our port listener
-  port.addListener(
+  await E(port).addListener(
     Far('acceptor', {
       async onAccept(_p, _localAddr, _remoteAddr) {
         return Far('handler', {
@@ -103,7 +103,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
   );
 
   const remoteEndpoint = `/ibc-hop/${connectionId}/ibc-port/transfer/ordered/ics20-1`;
-  let c = await port.connect(remoteEndpoint);
+  let c = await E(port).connect(remoteEndpoint);
   if (!channel.get("connection")) { channel.init("connection", c) };
 
   return {
