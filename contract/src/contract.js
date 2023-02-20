@@ -23,11 +23,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
 
   let zoe = zcf.getZoeService();
   
-  // grab the PSM installation from name hub
-  /** @type {Installation} */
-  const psmInstall = await E(namesByAddress).lookup('psm');
-  const instancePSM = await E(zoe).startInstance(psmInstall);
-  const psm = harden(instancePSM);
+  const psm = await E(namesByAddress).lookup('psm');
 
   /** @type {MapStore<String,Object>} */
   let channel = makeScalarMapStore("channel");

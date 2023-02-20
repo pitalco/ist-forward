@@ -4,17 +4,21 @@
 import { test } from './prepare-test-env-ava.js';
 import path from 'path';
 
+// @ts-ignore
 import bundleSource from '@endo/bundle-source';
 
 import { E } from '@endo/eventual-send';
-import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
-import { makeZoeKit } from '@agoric/zoe';
+import { makeFakeMyAddressNameAdmin } from '../src/utils.js';
 import { Far } from '@endo/marshal';
 import {
   makeNetworkProtocol,
   makeLoopbackProtocolHandler,
 } from '@agoric/swingset-vat/src/vats/network/index.js';
+import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 import { makePromiseKit } from '@endo/promise-kit';
+import { setupPsm } from '@agoric/inter-protocol/test/psm/setupPsm.js';
+import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
+import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 
 // @ts-ignore
 const filename = new URL(import.meta.url).pathname;
@@ -22,10 +26,17 @@ const dirname = path.dirname(filename);
 
 const contractPath = `${dirname}/../src/contract.js`;
 
+test.before(async t => {
+  const bundleCache = await unsafeMakeBundleCache('bundles/');
+  t.context = { bundleCache };
+});
+
 test('zoe - forward to psm', async (t) => {
-  const { zoeService } = makeZoeKit(makeFakeVatAdmin().admin);
-  const feePurse = E(zoeService).makeFeePurse();
-  const zoe = E(zoeService).bindDefaultFeePurse(feePurse);
+  // setup the psm
+  const electorateTerms = { committeeName: 'EnBancPanel', committeeSize: 3 };
+  const timer = buildManualTimer(t.log, 0n, { eventLoopIteration });
+  const { knut, zoe, psm, committeeCreator, governor, installs } =
+    await setupPsm(t, electorateTerms, timer);
 
   // pack the contract
   const bundle = await bundleSource(contractPath);
@@ -51,21 +62,17 @@ test('zoe - forward to psm', async (t) => {
     },
   });
 
-  const fakeNamesByAddress = Far('fakeNamesByAddress', {
-    lookup(...keys) {
-      t.is(keys.length, 1);
-      t.is(keys[0], 'psm', 'unrecognized fakeNamesByAddress');
-      return localDepositFacet;
-    },
-  });
+  const myAddressNameAdmin = makeFakeMyAddressNameAdmin();
+
+  // set the lookup for psm
+  await E(myAddressNameAdmin).default('psm', psm);
 
   const { publicFacet } = await E(zoe).startInstance(
     installation,
     {},
-    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, connectionId: "connection-0" },
+    { board: fakeBoard, namesByAddress: myAddressNameAdmin, network, connectionId: "connection-0" },
   );
 
-  // Bob got 1000 tokens
   t.deepEqual("", "");
 });
 

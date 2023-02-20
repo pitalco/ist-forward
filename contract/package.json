@@ -35,6 +35,7 @@
     "@agoric/store": "beta",
     "@agoric/zoe": "beta",
     "@agoric/pegasus": "beta",
+    "@agoric/inter-protocol": "beta",
     "@agoric/swingset-vat": "beta"
   },
   "ava": {
