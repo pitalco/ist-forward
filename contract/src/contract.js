@@ -2,6 +2,7 @@
 /* global harden */
 import '@agoric/zoe/exported.js';
 import '@agoric/swingset-vat/src/vats/network';
+import '@agoric/vats/exported.js';
 import { Far } from '@endo/marshal/src/make-far';
 import { E } from '@endo/eventual-send';
 import { makeScalarMapStore } from '@agoric/store';
@@ -14,7 +15,7 @@ import { AmountMath, makeIssuerKit } from '@agoric/ertp';
  *
  * @param {ZCF} zcf the Zoe Contract Facet
  * @param {ERef<BoardDepositFacet>} board where to find depositFacets by boardID
- * @param {ERef<import('@agoric/vats/src/nameHub').NameHub>} namesByAddress where to find depositFacets by bech32
+ * @param {ERef<NameHub>} namesByAddress where to find depositFacets by bech32
  * @param {ERef<Protocol>} network ibc network protocol
  * @param {String} connectionId connection id to create channel on
  *
@@ -106,21 +107,17 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
   let c = await E(port).connect(remoteEndpoint);
   if (!channel.has("channel")) { channel.init("channel", c) };
 
-  return {
-    tx: {
-      sendTransfer: () => {}
-    },
-    query: {
-      channelInfo: () => {}
-    }
-  }
+  return Far('forwarder', {
+    sendTransfer: () => {},
+    channelInfo: () => {}
+  })
 }
 
 /**
  * @typedef {ReturnType<typeof makePSMForwarder>} Forwarder
  */
 /**
- * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<import('@agoric/vats/src/nameHub').NameHub>, network: ERef<Protocol>, connectionId: String}>} zcf
+ * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, connectionId: String}>} zcf
  */
 const start = async (zcf) => {
   const { board, namesByAddress, network, connectionId } = zcf.getTerms();
