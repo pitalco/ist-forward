@@ -47,6 +47,9 @@ test('zoe - forward to psm', async (t) => {
   // Create a network protocol to be used for testing
   const network = makeNetworkProtocol(makeLoopbackProtocolHandler());
 
+  // create transfer port on connection-0
+  await E(network).bind('/ibc-hop/connection-0/ibc-port/transfer/ordered/ics20-1')
+
   /**
    * @type {PromiseRecord<DepositFacet>}
    */
