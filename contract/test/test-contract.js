@@ -67,14 +67,14 @@ test('zoe - forward to psm', async (t) => {
 
   const myAddressNameAdmin = makeFakeMyAddressNameAdmin();
 
-  // set the lookup for psm
-  await E(myAddressNameAdmin).default('psm', psm);
-
   const { publicFacet } = await E(zoe).startInstance(
     installation,
     {},
-    { board: fakeBoard, namesByAddress: myAddressNameAdmin, network, connectionId: "connection-0" },
+    { board: fakeBoard, namesByAddress: myAddressNameAdmin, network, connectionId: "connection-0", psm },
   );
+
+  const info = await E(publicFacet).channelInfo();
+  console.log(info);
 
   t.deepEqual("", "");
 });
