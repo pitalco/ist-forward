@@ -37,7 +37,8 @@
     "@agoric/pegasus": "beta",
     "@agoric/inter-protocol": "beta",
     "@agoric/swingset-vat": "beta",
-    "@agoric/vats": "beta"
+    "@agoric/vats": "beta",
+    "@agoric/nat": "^4.1.0"
   },
   "ava": {
     "files": [

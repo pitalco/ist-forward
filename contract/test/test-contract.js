@@ -19,6 +19,8 @@ import { makePromiseKit } from '@endo/promise-kit';
 import { setupPsm } from '@agoric/inter-protocol/test/psm/setupPsm.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
+import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
+import { Nat } from '@agoric/nat';
 
 // @ts-ignore
 const filename = new URL(import.meta.url).pathname;
@@ -66,6 +68,7 @@ test('zoe - forward to psm', async (t) => {
   });
 
   const myAddressNameAdmin = makeFakeMyAddressNameAdmin();
+  const address = await E(myAddressNameAdmin).getMyAddress();
 
   const { publicFacet } = await E(zoe).startInstance(
     installation,
@@ -74,8 +77,25 @@ test('zoe - forward to psm', async (t) => {
   );
 
   const info = await E(publicFacet).channelInfo();
-  console.log(info);
 
-  t.deepEqual("", "");
+  // Create and send packet to our ist forward port from new port
+  const port2 = await network.bind('/loopback/bar');
+  await port2.connect(
+    info.localAddress,
+    Far('opener', {
+      async onOpen(c, localAddr, remoteAddr, _connectionHandler) {
+        t.is(localAddr, '/loopback/bar/nonce/3');
+        t.is(remoteAddr, '/ibc-port/transfer-psm/nonce/2/nonce/4');
+        /** @type {Data} */
+        const packet = JSON.stringify(await makeICS20TransferPacket({
+          "value": Nat(10_000_000),
+          "remoteDenom": "USDC_axl",
+          "depositAddress": address
+        }));
+        // send a transfer packet
+        const pingack = await c.send(packet);
+        t.is(pingack, 'pingack', 'expected pingack');
+      },
+    }),
+  );
 });
-

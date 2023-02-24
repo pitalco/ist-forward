@@ -51,7 +51,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
             let issuerKit;
 
             // escrow the asset
-            if (channel.get("issuer")) {
+            if (channel.has("issuer")) {
               issuerKit = channel.get("issuer");
             } else {
               issuerKit = makeIssuerKit(remoteDenom);
@@ -61,7 +61,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
               channel.init("purse", issuerKit.issuer.makeEmptyPurse());
             }
             const coins = issuerKit.mint.mintPayment(
-              AmountMath.make(remoteDenom, value),
+              AmountMath.make(issuerKit.brand, value),
             );
 
             // swap in the PSM for IST
@@ -164,13 +164,10 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
      */
     channelInfo: async () => {
       /** @type {Connection} */
-      const connection = await channel.get("channel");
-      /** @type {IssuerKit} */
-      const issuerKit = channel.get("issuer");
+      const connection = await E(channel).get("channel");
       return {
         "localAddress": await E(connection).getLocalAddress(),
         "remoteAddress": await E(connection).getRemoteAddress(),
-        "brand": issuerKit.brand
       }
     }
   })
