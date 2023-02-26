@@ -8,7 +8,7 @@ import { E } from '@endo/eventual-send';
 import { makeScalarMapStore } from '@agoric/store';
 // @ts-ignore
 import { parseICS20TransferPacket, makeICS20TransferPacketAck } from '@agoric/pegasus/src/ics20';
-import { AmountMath, makeIssuerKit } from '@agoric/ertp';
+import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@agoric/nat';
 
 /**
@@ -18,11 +18,13 @@ import { Nat } from '@agoric/nat';
  * @param {ERef<BoardDepositFacet>} board where to find depositFacets by boardID
  * @param {ERef<NameHub>} namesByAddress where to find depositFacets by bech32
  * @param {ERef<Protocol>} network ibc network protocol
- * @param {String} connectionId connection id to create channel on
- * @param {Instance} psm PSM instance to create channel for
+ * @param {String} localConnectionId connection id to create channel on
+ * @param {String} remoteConnectionId connection id to create channel on
+ * @param {Object} psm PSM instance to create channel for
+ * @param {IssueKit} issueKit Issue kit for anchor asset for this psm
  *
  */
-const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionId, psm) => {
+const makePSMForwarder = async (zcf, board, namesByAddress, network, localConnectionId, remoteConnectionId, psm, issueKit) => {
 
   let zoe = zcf.getZoeService();
   
@@ -30,7 +32,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
   let channel = makeScalarMapStore("channel");
 
   // bind our custom port for transfer forwarding to psm
-  const port = await E(network).bind('/ibc-port/transfer-psm');
+  const port = await E(network).bind(`/ibc-port/transfer-psm`);
 
   // logic to define our port listener
   await E(port).addListener(
@@ -47,27 +49,16 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
             const packet = JSON.parse(packetBytes);
             let parts = await parseICS20TransferPacket(packet);
             let { depositAddress, remoteDenom, value } = parts;
-            /** @type {IssuerKit} */
-            let issuerKit;
 
-            // escrow the asset
-            if (channel.has("issuer")) {
-              issuerKit = channel.get("issuer");
-            } else {
-              issuerKit = makeIssuerKit(remoteDenom);
-              // store the issuer kit
-              channel.init("issuer", issuerKit);
-              // store our escrow purse for this channel
-              channel.init("purse", issuerKit.issuer.makeEmptyPurse());
-            }
-            const coins = issuerKit.mint.mintPayment(
-              AmountMath.make(issuerKit.brand, value),
+            console.log(issueKit.mint);
+            const coins = issueKit.mint.mintPayment(
+              AmountMath.make(issueKit.brand, value),
             );
 
             // swap in the PSM for IST
             // @ts-ignore
-            const invitation  = await E(psm.publicFacet).makeWantMintedInvitation();  
-            const giveAnchorAmount = AmountMath.make(remoteDenom, value);
+            const invitation  = await E(psm.psmPublicFacet).makeWantMintedInvitation();  
+            const giveAnchorAmount = AmountMath.make(issueKit.brand, value);
             // get the ist brand
             const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
             const wantMintedAmount = AmountMath.make(istBrand, value);
@@ -117,7 +108,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
     }),
   );
 
-  const remoteEndpoint = `/ibc-port/transfer-psm`;
+  const remoteEndpoint = `/ibc-hop/${remoteConnectionId}/ibc-port/transfer/unordered/ics20-1`;
   let c = await E(port).connect(remoteEndpoint);
   if (!channel.has("channel")) { channel.init("channel", c) };
 
@@ -132,7 +123,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
       const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
 
       // @ts-ignore
-      const invitation  = await E(psm.publicFacet).makeGiveMintedInvitation();
+      const invitation  = await E(E(psm).publicFacet).makeGiveMintedInvitation();
       /** @type {IssuerKit} */
       const issuerKit = channel.get("issuer");
       const giveMintedAmount = AmountMath.make(issuerKit.brand, Nat(amount));
@@ -177,13 +168,13 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, connectionI
  * @typedef {ReturnType<typeof makePSMForwarder>} Forwarder
  */
 /**
- * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, connectionId: String, psm: Instance}>} zcf
+ * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, localConnectionId: String, remoteConnectionId: String, psm: Instance, issueKit: IssueKit}>} zcf
  */
 const start = async (zcf) => {
-  const { board, namesByAddress, network, connectionId, psm } = zcf.getTerms();
+  const { board, namesByAddress, network, localConnectionId, remoteConnectionId, psm, issueKit } = zcf.getTerms();
 
   return harden({
-    publicFacet: await makePSMForwarder(zcf, board, namesByAddress, network, connectionId, psm),
+    publicFacet: await makePSMForwarder(zcf, board, namesByAddress, network, localConnectionId, remoteConnectionId, psm, issueKit),
   });
 };
 

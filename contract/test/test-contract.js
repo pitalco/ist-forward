@@ -49,9 +49,26 @@ test('zoe - forward to psm', async (t) => {
   // Create a network protocol to be used for testing
   const network = makeNetworkProtocol(makeLoopbackProtocolHandler());
 
-  // create transfer port on connection-0
-  await E(network).bind('/ibc-hop/connection-0/ibc-port/transfer/ordered/ics20-1')
+    /**
+   * Create the listener for the test port
+   *
+   * @type {ListenHandler}
+   */
+    const listener = Far('listener', {
+      async onAccept(_p, _localAddr, _remoteAddr, _listenHandler) {
+        return harden({
+          async onOpen(c) {
+            console.log(c);
+          },
+        });
+      },
+    });
 
+  // Create and send packet to our ist forward port from new port
+  const port2 = await E(network).bind('/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1');
+  await port2.addListener(listener)
+
+  // create transfer port on connection-0
   /**
    * @type {PromiseRecord<DepositFacet>}
    */
@@ -70,26 +87,31 @@ test('zoe - forward to psm', async (t) => {
   const myAddressNameAdmin = makeFakeMyAddressNameAdmin();
   const address = await E(myAddressNameAdmin).getMyAddress();
 
+  /** @type {IssueKit} */
+  const issueKit = {
+    brand: knut.brand,
+    issuer: knut.issuer,
+    mint: knut.mint
+  }
+
   const { publicFacet } = await E(zoe).startInstance(
     installation,
     {},
-    { board: fakeBoard, namesByAddress: myAddressNameAdmin, network, connectionId: "connection-0", psm },
+    { board: fakeBoard, namesByAddress: myAddressNameAdmin, network, localConnectionId: "connection-0", remoteConnectionId: "connection-0", psm, issueKit },
   );
 
   const info = await E(publicFacet).channelInfo();
 
-  // Create and send packet to our ist forward port from new port
-  const port2 = await network.bind('/loopback/bar');
-  await port2.connect(
+  await E(port2).connect(
     info.localAddress,
     Far('opener', {
       async onOpen(c, localAddr, remoteAddr, _connectionHandler) {
-        t.is(localAddr, '/loopback/bar/nonce/3');
-        t.is(remoteAddr, '/ibc-port/transfer-psm/nonce/2/nonce/4');
+        t.is(localAddr, '/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1/nonce/3');
+        t.is(remoteAddr, '/ibc-port/transfer-psm/nonce/1/nonce/4');
         /** @type {Data} */
         const packet = JSON.stringify(await makeICS20TransferPacket({
           "value": Nat(10_000_000),
-          "remoteDenom": "USDC_axl",
+          "remoteDenom": "aUSD",
           "depositAddress": address
         }));
         // send a transfer packet
