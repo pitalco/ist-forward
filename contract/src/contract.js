@@ -56,7 +56,8 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, localConnec
 
             // swap in the PSM for IST
             // @ts-ignore
-            const invitation  = await E(psm.psmPublicFacet).makeWantMintedInvitation();  
+            console.log(psm)
+            const invitation  = await E(psm.publicFacet).makeWantMintedInvitation();  
             const giveAnchorAmount = AmountMath.make(issueKit.brand, value);
             // get the ist brand
             const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
