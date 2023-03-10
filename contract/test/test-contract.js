@@ -16,7 +16,7 @@ import {
 } from '@agoric/swingset-vat/src/vats/network/index.js';
 import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 import { makePromiseKit } from '@endo/promise-kit';
-import { setupPsm } from '@agoric/inter-protocol/test/psm/setupPsm.js';
+import { setupPsm } from './setupPsm.js';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
@@ -83,9 +83,14 @@ test('zoe - forward to psm', async (t) => {
       throw Error(`unrecognized board id ${id}`);
     },
   });
-
-  const myAddressNameAdmin = makeFakeMyAddressNameAdmin();
-  const address = await E(myAddressNameAdmin).getMyAddress();
+  const fakeNamesByAddress = Far('fakeNamesByAddress', {
+    lookup(...keys) {
+      t.is(keys[0], 'agoric1234567', 'unrecognized fakeNamesByAddress');
+      t.is(keys[1], 'depositFacet', 'lookup not for the depositFacet');
+      t.is(keys.length, 2);
+      return localDepositFacet;
+    },
+  });
 
   /** @type {IssueKit} */
   const issueKit = {
@@ -94,10 +99,14 @@ test('zoe - forward to psm', async (t) => {
     mint: knut.mint
   }
 
+  const localPurseP = await E(issueKit.issuer).makeEmptyPurse();
+  const localPursePIst = await E(E(zoe).getFeeIssuer()).makeEmptyPurse();
+  resolveLocalDepositFacet(E(localPursePIst).getDepositFacet());
+
   const { publicFacet } = await E(zoe).startInstance(
     installation,
     {},
-    { board: fakeBoard, namesByAddress: myAddressNameAdmin, network, localConnectionId: "connection-0", remoteConnectionId: "connection-0", psm, issueKit },
+    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, localConnectionId: "connection-0", remoteConnectionId: "connection-0", psm, issueKit },
   );
 
   const info = await E(publicFacet).channelInfo();
@@ -110,9 +119,9 @@ test('zoe - forward to psm', async (t) => {
         t.is(remoteAddr, '/ibc-port/transfer-psm/nonce/1/nonce/4');
         /** @type {Data} */
         const packet = JSON.stringify(await makeICS20TransferPacket({
-          "value": Nat(10_000_000),
+          "value": Nat(10),
           "remoteDenom": "aUSD",
-          "depositAddress": address
+          "depositAddress": '0x1234'
         }));
         // send a transfer packet
         const pingack = await c.send(packet);
@@ -120,4 +129,8 @@ test('zoe - forward to psm', async (t) => {
       },
     }),
   );
+
+  /** @type {Amount} */
+  let amount = await E(localPursePIst).getCurrentAmount();
+  t.deepEqual(amount.value, Nat(1))
 });

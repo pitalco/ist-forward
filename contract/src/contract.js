@@ -50,8 +50,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, localConnec
             let parts = await parseICS20TransferPacket(packet);
             let { depositAddress, remoteDenom, value } = parts;
 
-            console.log(issueKit.mint);
-            const coins = issueKit.mint.mintPayment(
+            const coins = await E(issueKit.mint).mintPayment(
               AmountMath.make(issueKit.brand, value),
             );
 
@@ -74,9 +73,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, localConnec
               harden(paymentRecord)
             );
 
-            const payouts = await E(seat).getPayouts();
-
-            console.log(payouts);
+            const payout = await E(seat).getPayout('Out');
 
             /** @type {String} */
             let res;
@@ -90,15 +87,15 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, localConnec
                 .catch(_ => E(namesByAddress).lookup(depositAddress, 'depositFacet'));
 
               E(depositFacet)
-              .receive(await E(value).getPayout('Want'))
+              .receive(payout)
               .catch(reason => {
-                console.error(reason)
+                throw reason
               });
 
               res = await makeICS20TransferPacketAck(true, null)
             } catch (reason) {
               res = await makeICS20TransferPacketAck(true, reason)
-              console.error(reason);
+              throw reason
             }
 
             return res;
