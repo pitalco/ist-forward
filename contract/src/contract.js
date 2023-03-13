@@ -56,50 +56,58 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
               AmountMath.make(brand, Nat(10)),
             );
 
-            // swap in the PSM for IST
-            const invitation  = await E(psm.psmPublicFacet).makeWantMintedInvitation();  
-            const giveAnchorAmount = AmountMath.make(brand, Nat(10));
-            // get the ist brand
-            const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
-            const wantMintedAmount = AmountMath.make(istBrand, Nat(10));
-            /** @type {Proposal} */
-            const proposal = {
-              give: {In: giveAnchorAmount },
-              want: {Out: wantMintedAmount }
-            };
-            const paymentRecord = { In: coins };
-            const seat = E(zoe).offer(
-              invitation,
-              harden(proposal),
-              harden(paymentRecord)
-            );
-
-            const payout = await E(seat).getPayout("Out");
-
             /** @type {String} */
             let res;
-
+              
             try {
-              // send the IST to the depositAddress
-              // Look up the deposit facet for this board address, if there is one.
-              /** @type {DepositFacet} */
-              const depositFacet = await E(board)
-                .getValue(depositAddress)
-                .catch(async _ => await E(namesByAddress).lookup(depositAddress, 'depositFacet'));
+              // swap in the PSM for IST
+              const invitation  = await E(psm.psmPublicFacet).makeWantMintedInvitation();  
+              const giveAnchorAmount = AmountMath.make(brand, Nat(10));
+              // get the ist brand
+              const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
+              const wantMintedAmount = AmountMath.make(istBrand, Nat(10));
+              /** @type {Proposal} */
+              const proposal = {
+                give: {In: giveAnchorAmount },
+                want: {Out: wantMintedAmount }
+              };
+              const paymentRecord = { In: coins };
+              const seat = E(zoe).offer(
+                invitation,
+                harden(proposal),
+                harden(paymentRecord)
+              );
 
-              const sentAmount = await E(depositFacet)
-              .receive(payout)
-              .catch(reason => {
+              const payout = await E(seat).getPayout("Out");
+
+              try {
+                // send the IST to the depositAddress
+                // Look up the deposit facet for this board address, if there is one.
+                /** @type {DepositFacet} */
+                const depositFacet = await E(board)
+                  .getValue(depositAddress)
+                  .catch(async _ => await E(namesByAddress).lookup(depositAddress, 'depositFacet'));
+
+                await E(depositFacet)
+                .receive(payout)
+                .catch(reason => {
+                  throw reason
+                });
+
+                res = await makeICS20TransferPacketAck(true, null)
+              } catch (reason) {
+                res = await makeICS20TransferPacketAck(true, reason)
                 throw reason
-              });
-
-              res = await makeICS20TransferPacketAck(true, null)
+              }
             } catch (reason) {
+              // burn escrowed coins if error occurs
+              await E(issuer).burn(
+                coins
+              );
+              // return error ack
               res = await makeICS20TransferPacketAck(true, reason)
-              throw reason
             }
-
-            return res;
+            return res
           },
         });
       },
