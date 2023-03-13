@@ -38,7 +38,7 @@ const deployContract = async (homePromise, endowments) => {
 
   const { install } = await makeHelpers(homePromise, endowments);
 
-  const CONTRACT_NAME = 'fungibleFaucet';
+  const CONTRACT_NAME = 'istForward';
   const { id: INSTALLATION_BOARD_ID } = await install(
     './src/contract.js',
     CONTRACT_NAME,

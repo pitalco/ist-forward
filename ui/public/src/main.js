@@ -54,7 +54,7 @@ export default async function main() {
         dappContext: true,
       };
       apiSend({
-        type: 'fungibleFaucet/sendInvitation',
+        type: 'istForward/sendInvitation',
         data: {
           depositFacetId: zoeInvitationDepositFacetId,
           offer,
@@ -165,7 +165,7 @@ export default async function main() {
    */
   const apiRecv = (obj) => {
     switch (obj.type) {
-      case 'fungibleFaucet/sendInvitationResponse': {
+      case 'istForward/sendInvitationResponse': {
         // Once the invitation has been sent to the user, we update the
         // offer to include the invitationBoardId. Then we make a
         // request to the user's wallet to send the proposed offer for
