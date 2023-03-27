@@ -35,8 +35,6 @@ export const setUpZoeForTest = async () => {
     }),
   );
 
-  console.log(zoeService)
-
   return {
     zoe: zoeService,
     feeMintAccessP: feeMintAccess,
@@ -55,7 +53,6 @@ export const setupPsmBootstrap = async (
   timer = buildManualTimer(console.log),
   farZoeKit,
 ) => {
-  console.log("running")
   const { zoe: wrappedZoe, feeMintAccessP } = await (farZoeKit ||
     setUpZoeForTest());
 
