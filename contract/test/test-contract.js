@@ -19,7 +19,6 @@ import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
 import { Nat } from '@agoric/nat';
 import { setupPsm } from './setupPsm.js';
 import { buildManualTimer } from '@agoric/swingset-vat/tools/manual-timer.js';
-import { send } from 'process';
 
 // @ts-ignore
 const pathname = new URL(import.meta.url).pathname;
