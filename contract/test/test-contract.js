@@ -19,6 +19,7 @@ import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
 import { Nat } from '@agoric/nat';
 import { setupPsm } from './setupPsm.js';
 import { buildManualTimer } from '@agoric/swingset-vat/tools/manual-timer.js';
+import { send } from 'process';
 
 // @ts-ignore
 const pathname = new URL(import.meta.url).pathname;
@@ -129,4 +130,8 @@ test('zoe - forward to psm', async (t) => {
   /** @type {Amount} */
   let amount = await E(localPursePIst).getCurrentAmount();
   t.deepEqual(amount.value, Nat(1000000))
+
+  // send some ist back
+  const sendBack = await E(publicFacet).sendTransfer(amount, knut.brand);
+  console.log(sendBack)
 });

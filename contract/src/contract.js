@@ -10,6 +10,7 @@ import { makeScalarMapStore } from '@agoric/store';
 import { parseICS20TransferPacket, makeICS20TransferPacketAck } from '@agoric/pegasus/src/ics20';
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@agoric/nat';
+import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20';
 
 /**
  * Make a IST Forwarder public API.
@@ -120,38 +121,50 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
 
   return Far('forwarder', {
     /**
-     * Unlock IST into IBC escrowed ERTP asset. Unescrow and then send to remote chain.
+     * Swap IST into IBC ERTP asset. Then burn this ERTP asset and send to remote chain.
      *
-     * @param {Number} amount IST amount to send to remote network
+     * @param {Payment} tokenIn IST amount in
+     * @param {Brand} outBrand token brand expected out
      */
-    sendTransfer: async (amount) => {
+    sendTransfer: async (tokenIn, outBrand) => {
+      
+      const istIssuer = E(await E(zoe).getFeeIssuer());
+      const issuer = await E(minter).getIssuer();
+      // must be ist in
+      assert.equal(await E(tokenIn).getAllegedBrand(), await E(istIssuer).getBrand());
+
       // get the ist brand
       const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
 
       // @ts-ignore
       const invitation  = await E(E(psm).publicFacet).makeGiveMintedInvitation();
-      /** @type {IssuerKit} */
-      const issuerKit = channel.get("issuer");
-      const giveMintedAmount = AmountMath.make(issuerKit.brand, Nat(amount));
-      const wantAnchorAmount = AmountMath.make(istBrand, Nat(amount));
+      const giveAnchorAmount = AmountMath.make(istBrand, (await E(istIssuer).getAmountOf(tokenIn)).value);
+      const wantAnchorAmount = AmountMath.make(outBrand, (await E(istIssuer).getAmountOf(tokenIn)).value);
 
-      const proposal = { 
-        give: {In: giveMintedAmount },
+      const proposal = {
+        give: {In: giveAnchorAmount },
         want: {Out: wantAnchorAmount }
       };
 
-      const coins = issuerKit.mint.mintPayment(
-        AmountMath.make(issuerKit.brand, Nat(amount)),
-      );
-
-      const paymentRecord = { In: coins };
+      const paymentRecord = { In: tokenIn };
       const seat = await E(zoe).offer(
         invitation,
         harden(proposal),
         harden(paymentRecord)
       );
 
-      const payouts = await E(seat).getPayouts();
+      const payout = await E(seat).getPayout("Out");
+
+      // burn escrowed coins returned from PSM
+      await E(issuer).burn(
+        payout
+      );
+
+      // send the transfer packet
+      let transferPacket = makeICS20TransferPacket({});
+      const res = await c.send(JSON.stringify(transferPacket));
+
+      return res
     },
     /**
      * Query channel info.
