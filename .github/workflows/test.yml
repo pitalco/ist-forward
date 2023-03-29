@@ -1,11 +1,11 @@
-name: Integration Test agains Agoric SDK
+name: Run Tests
 
 # run CI on pushes to master, and on all PRs (even the ones that target other
 # branches)
 
 on:
  push:
-   branches: [master]
+   branches: [main]
  pull_request:
 
 jobs:
@@ -13,11 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # TODO: ['14.x', '16.x']
-        node-version: [14.x]
+        node-version: [16.x]
     steps:
     - name: Checkout dapp
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     # Select a branch on agoric-sdk to test against by adding text to the body of the
     # pull request. For example: #agoric-sdk-branch: zoe-release-0.7.0
@@ -36,9 +35,9 @@ jobs:
           return agoricSdkBranch;
 
     - name: Checkout agoric-sdk
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
-        repository: Agoric/agoric-sdk
+        repository: schnetzlerjoe/agoric-sdk
         path: agoric-sdk
         ref: ${{steps.get-branch.outputs.result}}
   
@@ -46,6 +45,9 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+
+    - name: Install yarn
+      run: npm i yarn -g
 
     - name: Setup and link agoric-sdk packages
       run: |
@@ -57,7 +59,5 @@ jobs:
 
     - name: agoric install
       run: agoric install
-    - name: yarn build
-      run: yarn build
-    - name: yarn integration test
-      run: yarn integration-test
+    - name: yarn test (everything)
+      run: yarn test
