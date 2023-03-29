@@ -19,13 +19,12 @@ import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20';
  * @param {ERef<BoardDepositFacet>} board where to find depositFacets by boardID
  * @param {ERef<NameHub>} namesByAddress where to find depositFacets by bech32
  * @param {ERef<Protocol>} network ibc network protocol
- * @param {Purse} istPurse connection id to create channel on
  * @param {String} remoteConnectionId connection id to create channel on
  * @param {Object} psm PSM instance to create channel for
  * @param {Mint} minter Minter for anchor asset for this psm
  *
  */
-const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, remoteConnectionId, psm, minter) => {
+const makePSMForwarder = async (zcf, board, namesByAddress, network, remoteConnectionId, psm, minter) => {
 
   let zoe = zcf.getZoeService();
   
@@ -54,8 +53,10 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
             const issuer = await E(minter).getIssuer();
             const brand = await E(issuer).getBrand();
             const coins = await E(minter).mintPayment(
-              AmountMath.make(brand, Nat(10)),
+              AmountMath.make(brand, Nat(Number(value))),
             );
+
+            if (!channel.has(remoteDenom)) { channel.init(remoteDenom, brand) };
 
             /** @type {String} */
             let res;
@@ -63,14 +64,11 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
             try {
               // swap in the PSM for IST
               const invitation  = await E(psm.psmPublicFacet).makeWantMintedInvitation();  
-              const giveAnchorAmount = AmountMath.make(brand, Nat(10));
-              // get the ist brand
-              const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
-              const wantMintedAmount = AmountMath.make(istBrand, Nat(10));
+              const giveAnchorAmount = AmountMath.make(brand, Nat(Number(value)));
+
               /** @type {Proposal} */
               const proposal = {
-                give: {In: giveAnchorAmount },
-                want: {Out: wantMintedAmount }
+                give: {In: giveAnchorAmount }
               };
               const paymentRecord = { In: coins };
               const seat = E(zoe).offer(
@@ -124,26 +122,22 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
      * Swap IST into IBC ERTP asset. Then burn this ERTP asset and send to remote chain.
      *
      * @param {Payment} tokenIn IST amount in
-     * @param {Brand} outBrand token brand expected out
+     * @param {String} remoteDenom the remote denom to send back over channel
+     * @param {String} receiver remote address receiver
      */
-    sendTransfer: async (tokenIn, outBrand) => {
+    sendTransfer: async (tokenIn, remoteDenom, receiver) => {
       
-      const istIssuer = E(await E(zoe).getFeeIssuer());
+      const istIssuer = await E(zoe).getFeeIssuer();
       const issuer = await E(minter).getIssuer();
       // must be ist in
       assert.equal(await E(tokenIn).getAllegedBrand(), await E(istIssuer).getBrand());
 
-      // get the ist brand
-      const istBrand = await E(E(zoe).getFeeIssuer()).getBrand();
-
       // @ts-ignore
-      const invitation  = await E(E(psm).publicFacet).makeGiveMintedInvitation();
-      const giveAnchorAmount = AmountMath.make(istBrand, (await E(istIssuer).getAmountOf(tokenIn)).value);
-      const wantAnchorAmount = AmountMath.make(outBrand, (await E(istIssuer).getAmountOf(tokenIn)).value);
+      const invitation  = await E(psm.psmPublicFacet).makeGiveMintedInvitation();
+      const giveAnchorAmount = AmountMath.make(tokenIn.getAllegedBrand(), (await E(istIssuer).getAmountOf(tokenIn)).value);
 
       const proposal = {
         give: {In: giveAnchorAmount },
-        want: {Out: wantAnchorAmount }
       };
 
       const paymentRecord = { In: tokenIn };
@@ -154,6 +148,7 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
       );
 
       const payout = await E(seat).getPayout("Out");
+      let value = await E(issuer).getAmountOf(payout);
 
       // burn escrowed coins returned from PSM
       await E(issuer).burn(
@@ -161,8 +156,12 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
       );
 
       // send the transfer packet
-      let transferPacket = makeICS20TransferPacket({});
-      const res = await c.send(JSON.stringify(transferPacket));
+      let transferPacket = await makeICS20TransferPacket({
+        value: value.value, remoteDenom, receiver, memo: "IST Forward Burn"
+      });
+      /** @type {Connection} */
+      const connection = channel.get("channel");
+      const res = await E(connection).send(JSON.stringify(transferPacket));
 
       return res
     },
@@ -185,13 +184,13 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, istPurse, r
  * @typedef {ReturnType<typeof makePSMForwarder>} Forwarder
  */
 /**
- * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, istPurse: Purse, remoteConnectionId: String, psm: Instance, minter: Mint}>} zcf
+ * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, remoteConnectionId: String, psm: Instance, minter: Mint}>} zcf
  */
 const start = async (zcf) => {
-  const { board, namesByAddress, network, istPurse, remoteConnectionId, psm, minter } = zcf.getTerms();
+  const { board, namesByAddress, network, remoteConnectionId, psm, minter } = zcf.getTerms();
 
   return harden({
-    publicFacet: await makePSMForwarder(zcf, board, namesByAddress, network, istPurse, remoteConnectionId, psm, minter),
+    publicFacet: await makePSMForwarder(zcf, board, namesByAddress, network, remoteConnectionId, psm, minter),
   });
 };
 

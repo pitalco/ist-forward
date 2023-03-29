@@ -19,6 +19,7 @@ import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
 import { Nat } from '@agoric/nat';
 import { setupPsm } from './setupPsm.js';
 import { buildManualTimer } from '@agoric/swingset-vat/tools/manual-timer.js';
+import { AmountMath } from '@agoric/ertp';
 
 // @ts-ignore
 const pathname = new URL(import.meta.url).pathname;
@@ -31,7 +32,7 @@ test('zoe - forward to psm', async (t) => {
   // @ts-ignore
   const timer = buildManualTimer(t.log, 0n, { eventLoopIteration });
 
-  const { knut, zoe, psm, committeeCreator, governor, installs } =
+  const { knut, zoe, psm } =
     // @ts-ignore
     await setupPsm(t, electorateTerms, timer);
   
@@ -95,12 +96,11 @@ test('zoe - forward to psm', async (t) => {
   /** @type {Purse} */
   const localPursePIst = await E(E(zoe).getFeeIssuer()).makeEmptyPurse();
   resolveLocalDepositFacet(E(localPursePIst).getDepositFacet());
-  const localPursePKnut = await E(knut.issuer).makeEmptyPurse();
 
   const { publicFacet } = await E(zoe).startInstance(
     installation,
     {},
-    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, istPurse: localPursePIst, remoteConnectionId: "connection-0", psm, minter },
+    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, remoteConnectionId: "connection-0", psm, minter },
   );
 
   const info = await E(publicFacet).channelInfo();
@@ -118,7 +118,7 @@ test('zoe - forward to psm', async (t) => {
 
   /** @type {Data} */
   const packet = JSON.stringify(await makeICS20TransferPacket({
-    "value": Nat(1000000),
+    "value": Nat(10),
     "remoteDenom": "KNUT",
     "depositAddress": 'agoric1234567'
   }));
@@ -126,11 +126,12 @@ test('zoe - forward to psm', async (t) => {
   const pingack = await channel.send(packet);
   t.is(pingack, '{"result":"AQ=="}', 'expected {"result":"AQ=="}');
 
-  /** @type {Amount} */
   let amount = await E(localPursePIst).getCurrentAmount();
-  t.deepEqual(amount.value, Nat(1000000))
+  t.deepEqual(amount.value, Nat(1000000));
 
-  // send some ist back
-  const sendBack = await E(publicFacet).sendTransfer(amount, knut.brand);
-  console.log(sendBack)
+  // send 100000n ist back through
+  const payment = await E(localPursePIst).withdraw(AmountMath.make(await E(localPursePIst).getAllegedBrand(), Nat(100000)));
+  await E(publicFacet).sendTransfer(payment, "KNUT", "osmo1234567");
+  amount = await E(localPursePIst).getCurrentAmount();
+  t.deepEqual(amount.value, Nat(900000));
 });
