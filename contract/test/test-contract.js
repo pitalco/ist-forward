@@ -100,7 +100,8 @@ test('zoe - forward to psm', async (t) => {
   const { publicFacet } = await E(zoe).startInstance(
     installation,
     {},
-    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, remoteConnectionId: "connection-0", psm, minter },
+    { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, remoteConnectionId: "connection-0", psm },
+    { minter },
   );
 
   const info = await E(publicFacet).channelInfo();

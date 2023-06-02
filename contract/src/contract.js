@@ -184,13 +184,14 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, remoteConne
  * @typedef {ReturnType<typeof makePSMForwarder>} Forwarder
  */
 /**
- * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, remoteConnectionId: String, psm: Instance, minter: Mint}>} zcf
+ * @param {ZCF<{board: ERef<BoardDepositFacet>, namesByAddress: ERef<NameHub>, network: ERef<Protocol>, remoteConnectionId: String, psm: Instance}>} zcf
+ * @param {{minter: Mint}} privateArgs
  */
-const start = async (zcf) => {
-  const { board, namesByAddress, network, remoteConnectionId, psm, minter } = zcf.getTerms();
+const start = async (zcf, privateArgs) => {
+  const { board, namesByAddress, network, remoteConnectionId, psm } = zcf.getTerms();
 
   return harden({
-    publicFacet: await makePSMForwarder(zcf, board, namesByAddress, network, remoteConnectionId, psm, minter),
+    publicFacet: await makePSMForwarder(zcf, board, namesByAddress, network, remoteConnectionId, psm, privateArgs.minter),
   });
 };
 
