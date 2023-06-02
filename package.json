@@ -1,6 +1,6 @@
 {
-  "name": "tester",
-  "version": "0.0.1",
+  "name": "ist-forward",
+  "version": "0.1.0",
   "private": true,
   "useWorkspaces": true,
   "workspaces": [

@@ -1,8 +1,8 @@
 {
-  "name": "tester-contract",
+  "name": "ist-forward-contract",
   "version": "0.1.0",
   "private": true,
-  "description": "Contract for the Agoric Dapp",
+  "description": "Contract for IST Forwarding for Agoric",
   "type": "module",
   "scripts": {
     "build": "exit 0",
@@ -49,14 +49,14 @@
   "keywords": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Agoric/agoric"
+    "url": "git+https://github.com/pitalco/ist-forward"
   },
   "author": "Agoric",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Agoric/agoric/issues"
+    "url": "https://github.com/pitalco/ist-forward/issues"
   },
-  "homepage": "https://github.com/Agoric/agoric#readme",
+  "homepage": "https://github.com/pitalco/ist-forward#readme",
   "eslintConfig": {
     "extends": [
       "@agoric"
