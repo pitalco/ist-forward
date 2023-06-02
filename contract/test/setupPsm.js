@@ -8,10 +8,7 @@ import {
   makePromiseSpace,
 } from '@agoric/vats/src/core/utils.js';
 import { makeBoard } from '@agoric/vats/src/lib-board.js';
-import { Stable } from '@agoric/vats/src/tokens.js';
 import { makeScalarMapStore } from '@agoric/vat-data';
-import { makeZoeKit } from '@agoric/zoe';
-import { makeFakeVatAdmin } from '@agoric/zoe/tools/fakeVatAdmin.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeMockChainStorageRoot } from '@agoric/vats/tools/storage-test-utils.js';
 import { makeIssuerKit } from '@agoric/ertp';
@@ -25,35 +22,11 @@ import { startPSM, startPSMCharter } from '@agoric/inter-protocol/src/proposals/
 import bundlePsm from '@agoric/inter-protocol/bundles/bundle-psm.js';
 import charterBundle from '@agoric/inter-protocol/bundles/bundle-psmCharter.js';
 import { allValues } from '@agoric/inter-protocol/src/collect.js';
-
-export const setUpZoeForTest = () => {
-  const { makeFar } = makeLoopback('zoeTest');
-
-  const { zoeService, feeMintAccess: nonFarFeeMintAccess } = makeZoeKit(
-    makeFakeVatAdmin(() => {}).admin,
-    undefined,
-    {
-      name: Stable.symbol,
-      assetKind: Stable.assetKind,
-      displayInfo: Stable.displayInfo,
-    },
-  );
-  /** @type {ERef<ZoeService>} */
-  const zoe = makeFar(zoeService);
-  const feeMintAccess = makeFar(nonFarFeeMintAccess);
-  return {
-    zoe,
-    feeMintAccess,
-  };
-};
-harden(setUpZoeForTest);
-/**
- * @typedef {ReturnType<typeof setUpZoeForTest>} FarZoeKit
- */
+import { setUpZoeForTest } from '@agoric/inter-protocol/test/supports.js';
 
 /**
  * @param {TimerService} timer
- * @param {FarZoeKit} [farZoeKit]
+ * @param {import('@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup').FarZoeKit} [farZoeKit]
  */
 export const setupPsmBootstrap = async (
   timer = buildManualTimer(console.log),
@@ -89,7 +62,7 @@ export const setupPsmBootstrap = async (
  * @param {*} t
  * @param {{ committeeName: string, committeeSize: number}} electorateTerms
  * @param {ManualTimer | undefined=} timer
- * @param {FarZoeKit} [farZoeKit]
+ * @param {import('@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup').FarZoeKit} [farZoeKit]
  */
 export const setupPsm = async (
   t,
