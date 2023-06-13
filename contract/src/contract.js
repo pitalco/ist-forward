@@ -11,6 +11,7 @@ import { parseICS20TransferPacket, makeICS20TransferPacketAck } from '@agoric/pe
 import { AmountMath } from '@agoric/ertp';
 import { Nat } from '@agoric/nat';
 import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20';
+import { offerTo } from '@agoric/zoe/src/contractSupport/zoeHelpers.js';
 
 /**
  * Make a IST Forwarder public API.
@@ -31,8 +32,18 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, remoteConne
   /** @type {MapStore<String,Object>} */
   let channel = makeScalarMapStore("channel");
 
-  // bind our custom port for transfer forwarding to psm
-  const port = await E(network).bind(`/ibc-port/transfer-psm`);
+  const issuerP = E(minter).getIssuer();
+  const brandP = E(issuerP).getBrand();
+
+  const [
+    port,
+    issuer,
+    brand,
+  ] = await Promise.all([
+    E(network).bind(`/ibc-port/transfer-psm`),
+    issuerP,
+    brandP,
+  ])
 
   // logic to define our port listener
   await E(port).addListener(
@@ -46,12 +57,9 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, remoteConne
             if (!channel.has("channel")) { channel.init("channel", c) };
           },
           async onReceive(_c, packetBytes) {
-            const packet = JSON.parse(packetBytes);
-            let parts = await parseICS20TransferPacket(packet);
+            let parts = await parseICS20TransferPacket(packetBytes);
             let { depositAddress, remoteDenom, value } = parts;
 
-            const issuer = await E(minter).getIssuer();
-            const brand = await E(issuer).getBrand();
             const coins = await E(minter).mintPayment(
               AmountMath.make(brand, Nat(Number(value))),
             );
@@ -115,56 +123,72 @@ const makePSMForwarder = async (zcf, board, namesByAddress, network, remoteConne
 
   const remoteEndpoint = `/ibc-hop/${remoteConnectionId}/ibc-port/transfer/unordered/ics20-1`;
   let c = await E(port).connect(remoteEndpoint);
-  if (!channel.has("channel")) { channel.init("channel", c) };
+  if (!channel.has("channel")) { channel.init("channel", c) }
 
-  return Far('forwarder', {
-    /**
-     * Swap IST into IBC ERTP asset. Then burn this ERTP asset and send to remote chain.
-     *
-     * @param {Payment} tokenIn IST amount in
-     * @param {String} remoteDenom the remote denom to send back over channel
-     * @param {String} receiver remote address receiver
-     */
-    sendTransfer: async (tokenIn, remoteDenom, receiver) => {
-      
-      const istIssuer = await E(zoe).getFeeIssuer();
-      const issuer = await E(minter).getIssuer();
-      // must be ist in
-      assert.equal(await E(tokenIn).getAllegedBrand(), await E(istIssuer).getBrand());
+  const makeSendTransferInvitation = () => {
+    /** @type OfferHandler */
+    const sendTransfer = async (zcfSeat, offerArgs) => {
+      const {
+        give: {
+          IST: istAmount
+        }
+      } = zcfSeat.getProposal();
 
-      // @ts-ignore
-      const invitation  = await E(psm.psmPublicFacet).makeGiveMintedInvitation();
-      const giveAnchorAmount = AmountMath.make(tokenIn.getAllegedBrand(), (await E(istIssuer).getAmountOf(tokenIn)).value);
+      const {
+        remoteDenom, receiver,
+      } = offerArgs;
 
-      const proposal = {
-        give: {In: giveAnchorAmount },
-      };
+      const invitation  = E(psm.psmPublicFacet).makeGiveMintedInvitation();
+      const { zcfSeat: tempSeat, userSeat: tempUserSeatP } = zcf.makeEmptySeatKit();
 
-      const paymentRecord = { In: tokenIn };
-      const seat = await E(zoe).offer(
+      const { deposited } = await offerTo(
+        zcf,
         invitation,
-        harden(proposal),
-        harden(paymentRecord)
+        harden({
+          IST: 'In',
+          Anchor: 'Out'
+        }),
+        harden({
+          give: { In: istAmount }
+        }),
+        zcfSeat,
+        tempSeat
       );
 
-      const payout = await E(seat).getPayout("Out");
-      let value = await E(issuer).getAmountOf(payout);
+      const amounts = await deposited;
+      console.log({
+        amounts
+      })
+      tempSeat.exit();
+
+      const anchorPayout = await E(tempUserSeatP).getPayout('Anchor');
+      let value = await E(issuer).getAmountOf(anchorPayout);
 
       // burn escrowed coins returned from PSM
+      // How about if we burn the tokens only when the IBC transfer is successful?
       await E(issuer).burn(
-        payout
+        anchorPayout
       );
 
       // send the transfer packet
       let transferPacket = await makeICS20TransferPacket({
-        value: value.value, remoteDenom, receiver, memo: "IST Forward Burn"
+        value: value.value, remoteDenom, depositAddress: receiver, memo: "IST Forward Burn"
       });
       /** @type {Connection} */
       const connection = channel.get("channel");
-      const res = await E(connection).send(JSON.stringify(transferPacket));
+      const res = await E(connection).send(transferPacket);
 
-      return res
-    },
+      return harden({ message: 'Done', result: res });
+    };
+
+    return zcf.makeInvitation(sendTransfer, 'Send Transfer Invitation');
+  };
+
+  return Far('forwarder', {
+    /**
+     * Swap IST into IBC ERTP asset. Then burn this ERTP asset and send to remote chain.
+     */
+    makeSendTransferInvitation,
     /**
      * Query channel info.
      *

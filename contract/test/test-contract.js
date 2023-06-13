@@ -15,9 +15,9 @@ import {
 } from '@agoric/swingset-vat/src/vats/network/index.js';
 import { makePromiseKit } from '@endo/promise-kit';
 import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
-import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
+import { makeICS20TransferPacket, parseICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
 import { Nat } from '@agoric/nat';
-import { setupPsm } from './setupPsm.js';
+import { setupPsm, IST_DECIMALS } from './setupPsm.js';
 import { buildManualTimer } from '@agoric/swingset-vat/tools/manual-timer.js';
 import { AmountMath } from '@agoric/ertp';
 
@@ -57,8 +57,7 @@ test('zoe - forward to psm', async (t) => {
             console.log(c);
           },
           async onReceive(_c, packetBytes) {
-            console.log(JSON.parse(packetBytes));
-            return "AQ=="
+            return packetBytes;
           },
         });
       },
@@ -92,6 +91,8 @@ test('zoe - forward to psm', async (t) => {
   });
 
   const minter = knut.mint
+  const istIssuer = await E(zoe).getFeeIssuer();
+  const istBrand = await E(istIssuer).getBrand();
 
   /** @type {Purse} */
   const localPursePIst = await E(E(zoe).getFeeIssuer()).makeEmptyPurse();
@@ -99,7 +100,10 @@ test('zoe - forward to psm', async (t) => {
 
   const { publicFacet } = await E(zoe).startInstance(
     installation,
-    {},
+    {
+      IST: istIssuer,
+      Anchor: knut.issuer,
+    },
     { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, remoteConnectionId: "connection-0", psm },
     { minter },
   );
@@ -118,21 +122,53 @@ test('zoe - forward to psm', async (t) => {
   );
 
   /** @type {Data} */
-  const packet = JSON.stringify(await makeICS20TransferPacket({
-    "value": Nat(10),
+  const packet = await makeICS20TransferPacket({
+    "value": Nat(10 ** IST_DECIMALS),
     "remoteDenom": "KNUT",
     "depositAddress": 'agoric1234567'
-  }));
+  });
   // send a transfer packet
   const pingack = await channel.send(packet);
   t.is(pingack, '{"result":"AQ=="}', 'expected {"result":"AQ=="}');
 
-  let amount = await E(localPursePIst).getCurrentAmount();
-  t.deepEqual(amount.value, Nat(1000000));
+  const userIstBalanceBefore = await E(localPursePIst).getCurrentAmount();
+  t.deepEqual(userIstBalanceBefore.value, Nat(1000000));
 
-  // send 100000n ist back through
-  const payment = await E(localPursePIst).withdraw(AmountMath.make(await E(localPursePIst).getAllegedBrand(), Nat(100000)));
-  await E(publicFacet).sendTransfer(payment, "KNUT", "osmo1234567");
-  amount = await E(localPursePIst).getCurrentAmount();
-  t.deepEqual(amount.value, Nat(900000));
+  const invitation = E(publicFacet).makeSendTransferInvitation();
+  const giveIstAmount = AmountMath.make(istBrand, Nat(10 ** IST_DECIMALS));
+
+  const proposal = harden({
+    give: {
+      IST: giveIstAmount,
+    }
+  });
+
+  const payment = harden({
+    IST: await E(localPursePIst).withdraw(giveIstAmount),
+  });
+
+  const userSeat = await E(zoe).offer(
+    invitation,
+    proposal,
+    payment,
+    harden({
+      remoteDenom: 'KNUT',
+      receiver: 'osmo1234567',
+    })
+  );
+  console.log({userSeat})
+  const { message, result } = await E(userSeat).getOfferResult();
+  t.is(message, 'Done');
+  const parsedResponse = await parseICS20TransferPacket(result);
+  const userIstBalanceAfter = await E(localPursePIst).getCurrentAmount();
+
+  const expectedResponse = harden({
+    depositAddress: 'osmo1234567',
+    remoteDenom: 'KNUT',
+    value: giveIstAmount.value,
+    memo: 'IST Forward Burn',
+  })
+
+  t.deepEqual(parsedResponse, expectedResponse);
+  t.deepEqual(userIstBalanceAfter, AmountMath.subtract(userIstBalanceBefore, giveIstAmount));
 });

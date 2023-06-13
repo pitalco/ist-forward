@@ -11,7 +11,7 @@ import { makeBoard } from '@agoric/vats/src/lib-board.js';
 import { makeScalarMapStore } from '@agoric/vat-data';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { makeMockChainStorageRoot } from '@agoric/vats/tools/storage-test-utils.js';
-import { makeIssuerKit } from '@agoric/ertp';
+import { makeIssuerKit, AssetKind } from '@agoric/ertp';
 
 import {
   installGovernance,
@@ -23,6 +23,8 @@ import bundlePsm from '@agoric/inter-protocol/bundles/bundle-psm.js';
 import charterBundle from '@agoric/inter-protocol/bundles/bundle-psmCharter.js';
 import { allValues } from '@agoric/inter-protocol/src/collect.js';
 import { setUpZoeForTest } from '@agoric/inter-protocol/test/supports.js';
+
+export const IST_DECIMALS = 6;
 
 /**
  * @param {TimerService} timer
@@ -74,7 +76,7 @@ export const setupPsm = async (
     farZoeKit = await setUpZoeForTest();
   }
 
-  const knut = withAmountUtils(makeIssuerKit('KNUT'));
+  const knut = withAmountUtils(makeIssuerKit('KNUT', AssetKind.NAT, harden({decimalPlaces: IST_DECIMALS})));
 
   const { feeMintAccess, zoe } = farZoeKit;
   const space = await setupPsmBootstrap(timer, farZoeKit);
@@ -111,9 +113,6 @@ export const setupPsm = async (
       options: {
         anchorOptions: {
           denom: 'AUSD',
-          decimalPlaces: 6,
-          keyword: 'AUSD',
-          proposedName: 'AUSD',
         },
       },
     }),
