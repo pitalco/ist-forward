@@ -60,7 +60,7 @@ rly query channels axelar
 ```
 
 ## Send USDC To transfer-psm Port to Turn Into IST
-`NOTE`: This asssumes that there is a PSM for the asset being sent (USDC in this case)!
+NOTE: This asssumes that there is a PSM for the asset being sent (IBC USDC through the channel specified in this case)!
 ```bash
 rly transact transfer axelar agoriclocal 1000000uausdc {agoric address from above} {channel-id from above} --path agoric-axelar
 ```
