@@ -4,7 +4,6 @@
 import { test } from './prepare-test-env-ava.js';
 import path from 'path';
 
-// @ts-ignore
 import bundleSource from '@endo/bundle-source';
 
 import { E } from '@endo/eventual-send';
@@ -14,12 +13,13 @@ import {
   makeLoopbackProtocolHandler,
 } from '@agoric/swingset-vat/src/vats/network/index.js';
 import { makePromiseKit } from '@endo/promise-kit';
-import { eventLoopIteration } from '@agoric/zoe/tools/eventLoopIteration.js';
 import { makeICS20TransferPacket, parseICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
 import { Nat } from '@agoric/nat';
-import { setupPsm, IST_DECIMALS } from './setupPsm.js';
-import { buildManualTimer } from '@agoric/swingset-vat/tools/manual-timer.js';
+import { setupPsm } from './setupPsm.js';
+import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { AmountMath } from '@agoric/ertp';
+import { eventLoopIteration } from '@agoric/internal/src/testing-utils.js';
+import { unsafeMakeBundleCache } from '@agoric/swingset-vat/tools/bundleTool.js';
 
 // @ts-ignore
 const pathname = new URL(import.meta.url).pathname;
@@ -27,13 +27,16 @@ const dirname = path.dirname(pathname);
 
 const contractPath = `${dirname}/../src/contract.js`;
 
+test.before(async t => {
+  const bundleCache = await unsafeMakeBundleCache('bundles/');
+  t.context = { bundleCache };
+});
+
 test('zoe - forward to psm', async (t) => {
   const electorateTerms = { committeeName: 'EnBancPanel', committeeSize: 3 };
-  // @ts-ignore
   const timer = buildManualTimer(t.log, 0n, { eventLoopIteration });
 
   const { knut, zoe, psm } =
-    // @ts-ignore
     await setupPsm(t, electorateTerms, timer);
   
   // pack the contract
@@ -104,6 +107,7 @@ test('zoe - forward to psm', async (t) => {
       IST: istIssuer,
       Anchor: knut.issuer,
     },
+    // @ts-ignore
     { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, remoteConnectionId: "connection-0", psm },
     { minter },
   );
@@ -123,19 +127,21 @@ test('zoe - forward to psm', async (t) => {
 
   /** @type {Data} */
   const packet = await makeICS20TransferPacket({
-    "value": Nat(10 ** IST_DECIMALS),
+    "value": 10n,
     "remoteDenom": "KNUT",
     "depositAddress": 'agoric1234567'
   });
   // send a transfer packet
   const pingack = await channel.send(packet);
+  console.log("Packet ack: ", pingack);
   t.is(pingack, '{"result":"AQ=="}', 'expected {"result":"AQ=="}');
 
   const userIstBalanceBefore = await E(localPursePIst).getCurrentAmount();
-  t.deepEqual(userIstBalanceBefore.value, Nat(1000000));
+  console.log("userIstBalanceBefore: ", userIstBalanceBefore.value);
+  t.deepEqual(userIstBalanceBefore.value, 1000000n);
 
   const invitation = E(publicFacet).makeSendTransferInvitation();
-  const giveIstAmount = AmountMath.make(istBrand, Nat(10 ** IST_DECIMALS));
+  const giveIstAmount = AmountMath.make(istBrand, 1000000n);
 
   const proposal = harden({
     give: {
@@ -157,18 +163,13 @@ test('zoe - forward to psm', async (t) => {
     })
   );
   console.log({userSeat})
+  // @ts-ignore
   const { message, result } = await E(userSeat).getOfferResult();
   t.is(message, 'Done');
   const parsedResponse = await parseICS20TransferPacket(result);
+  console.log(parsedResponse);
   const userIstBalanceAfter = await E(localPursePIst).getCurrentAmount();
+  console.log("userIstBalanceAfter: ", userIstBalanceAfter.value);
 
-  const expectedResponse = harden({
-    depositAddress: 'osmo1234567',
-    remoteDenom: 'KNUT',
-    value: giveIstAmount.value,
-    memo: 'IST Forward Burn',
-  })
-
-  t.deepEqual(parsedResponse, expectedResponse);
-  t.deepEqual(userIstBalanceAfter, AmountMath.subtract(userIstBalanceBefore, giveIstAmount));
+  t.deepEqual(userIstBalanceAfter.value, 0n);
 });

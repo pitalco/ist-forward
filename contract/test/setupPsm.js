@@ -1,43 +1,41 @@
 // @ts-check
 
-import { Far, makeLoopback } from '@endo/captp';
+import { Far } from '@endo/captp';
 import { E } from '@endo/eventual-send';
 
-import {
-  makeAgoricNamesAccess,
-  makePromiseSpace,
-} from '@agoric/vats/src/core/utils.js';
-import { makeBoard } from '@agoric/vats/src/lib-board.js';
+import { makeAgoricNamesAccess, makePromiseSpace } from '@agoric/vats';
+import { makeFakeBoard } from '@agoric/vats/tools/board-utils.js';
+import { setUpZoeForTest } from '@agoric/zoe/tools/setup-zoe.js';
 import { makeScalarMapStore } from '@agoric/vat-data';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
-import { makeMockChainStorageRoot } from '@agoric/vats/tools/storage-test-utils.js';
-import { makeIssuerKit, AssetKind } from '@agoric/ertp';
+import { allValues } from '@agoric/internal';
+import { makeMockChainStorageRoot } from '@agoric/internal/src/storage-test-utils.js';
+import { makeIssuerKit } from '@agoric/ertp';
 
+import { produceDiagnostics } from '@agoric/vats/src/core/basic-behaviors.js';
 import {
   installGovernance,
   withAmountUtils,
 } from '@agoric/inter-protocol/test/supports.js';
 import { startEconomicCommittee } from '@agoric/inter-protocol/src/proposals/startEconCommittee.js';
-import { startPSM, startPSMCharter } from '@agoric/inter-protocol/src/proposals/startPSM.js';
-import bundlePsm from '@agoric/inter-protocol/bundles/bundle-psm.js';
-import charterBundle from '@agoric/inter-protocol/bundles/bundle-psmCharter.js';
-import { allValues } from '@agoric/inter-protocol/src/collect.js';
-import { setUpZoeForTest } from '@agoric/inter-protocol/test/supports.js';
-
-export const IST_DECIMALS = 6;
+import { startPSM, startEconCharter } from '@agoric/inter-protocol/src/proposals/startPSM.js';
+import psmBundle from "@agoric/inter-protocol/bundles/bundle-psm.js"
+import charterBundle from "@agoric/inter-protocol/bundles/bundle-econCommitteeCharter.js"
 
 /**
- * @param {TimerService} timer
- * @param {import('@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup').FarZoeKit} [farZoeKit]
+ * @typedef {ReturnType<typeof setUpZoeForTest>} FarZoeKit
+ */
+
+/**
+ * @param {import('@agoric/time/src/types').TimerService} timer
+ * @param {FarZoeKit} [farZoeKit]
  */
 export const setupPsmBootstrap = async (
   timer = buildManualTimer(console.log),
   farZoeKit,
 ) => {
-  if (!farZoeKit) {
-    farZoeKit = await setUpZoeForTest();
-  }
-  const { zoe } = farZoeKit;
+  const { zoe: wrappedZoe, feeMintAccessP } = await (farZoeKit ||
+    setUpZoeForTest());
 
   const space = /** @type {any} */ (makePromiseSpace());
   const { produce, consume } =
@@ -46,25 +44,29 @@ export const setupPsmBootstrap = async (
     );
 
   produce.chainTimerService.resolve(timer);
-  produce.zoe.resolve(zoe);
+  produce.zoe.resolve(wrappedZoe);
+  /** @type {Promise<ZoeService>} */
+  const zoe = space.consume.zoe;
+  produce.feeMintAccess.resolve(feeMintAccessP);
 
-  const { agoricNames, agoricNamesAdmin, spaces } = makeAgoricNamesAccess();
+  const { agoricNames, agoricNamesAdmin, spaces } =
+    await makeAgoricNamesAccess();
   produce.agoricNames.resolve(agoricNames);
   produce.agoricNamesAdmin.resolve(agoricNamesAdmin);
 
   installGovernance(zoe, spaces.installation.produce);
   const mockChainStorage = makeMockChainStorageRoot();
   produce.chainStorage.resolve(mockChainStorage);
-  produce.board.resolve(makeBoard());
+  produce.board.resolve(makeFakeBoard());
 
-  return { produce, consume, ...spaces, mockChainStorage };
+  return { vatParameters: {}, produce, consume, ...spaces, mockChainStorage };
 };
 
 /**
  * @param {*} t
  * @param {{ committeeName: string, committeeSize: number}} electorateTerms
- * @param {ManualTimer | undefined=} timer
- * @param {import('@agoric/inter-protocol/test/amm/vpool-xyk-amm/setup').FarZoeKit} [farZoeKit]
+ * @param {ManualTimer} [timer]
+ * @param {FarZoeKit} [farZoeKit]
  */
 export const setupPsm = async (
   t,
@@ -72,24 +74,20 @@ export const setupPsm = async (
   timer = buildManualTimer(t.log),
   farZoeKit,
 ) => {
-  if (!farZoeKit) {
-    farZoeKit = await setUpZoeForTest();
-  }
+  const knut = withAmountUtils(makeIssuerKit('KNUT'));
 
-  const knut = withAmountUtils(makeIssuerKit('KNUT', AssetKind.NAT, harden({decimalPlaces: IST_DECIMALS})));
-
-  const { feeMintAccess, zoe } = farZoeKit;
   const space = await setupPsmBootstrap(timer, farZoeKit);
-  space.produce.zoe.resolve(farZoeKit.zoe);
-  space.produce.feeMintAccess.resolve(feeMintAccess);
+  const zoe = space.consume.zoe;
   const { consume, brand, issuer, installation, instance } = space;
-  installation.produce.psm.resolve(E(zoe).install(bundlePsm));
-  installation.produce.psmCharter.resolve(E(zoe).install(charterBundle));
+  installation.produce.psm.resolve(E(zoe).install(psmBundle));
+  installation.produce.econCommitteeCharter.resolve(
+    E(zoe).install(charterBundle),
+  );
 
   brand.produce.AUSD.resolve(knut.brand);
   issuer.produce.AUSD.resolve(knut.issuer);
 
-  space.produce.psmFacets.resolve(makeScalarMapStore());
+  space.produce.psmKit.resolve(makeScalarMapStore());
   const istIssuer = await E(zoe).getFeeIssuer();
   const istBrand = await E(istIssuer).getBrand();
 
@@ -105,14 +103,18 @@ export const setupPsm = async (
   });
 
   await Promise.all([
+    produceDiagnostics(space),
     startEconomicCommittee(space, {
       options: { econCommitteeOptions: electorateTerms },
     }),
-    startPSMCharter(space),
+    startEconCharter(space),
     startPSM(space, {
       options: {
         anchorOptions: {
           denom: 'AUSD',
+          decimalPlaces: 6,
+          keyword: 'AUSD',
+          proposedName: 'AUSD',
         },
       },
     }),
@@ -120,16 +122,16 @@ export const setupPsm = async (
 
   const installs = await allValues({
     psm: installation.consume.psm,
-    psmCharter: installation.consume.psmCharter,
+    econCommitteeCharter: installation.consume.econCommitteeCharter,
     governor: installation.consume.contractGovernor,
     electorate: installation.consume.committee,
     counter: installation.consume.binaryVoteCounter,
   });
 
-  const allPsms = await consume.psmFacets;
-  const psmFacets = allPsms.get(knut.brand);
-  const governorCreatorFacet = psmFacets.psmGovernorCreatorFacet;
-  const governorInstance = psmFacets.psmGovernor;
+  const allPsms = await consume.psmKit;
+  const psmKit = allPsms.get(knut.brand);
+  const governorCreatorFacet = psmKit.psmGovernorCreatorFacet;
+  const governorInstance = psmKit.psmGovernor;
   const governorPublicFacet = await E(zoe).getPublicFacet(governorInstance);
   const g = {
     governorInstance,
@@ -138,17 +140,18 @@ export const setupPsm = async (
   };
   const governedInstance = E(governorPublicFacet).getGovernedContract();
 
-  /** @type { GovernedPublicFacet<PsmPublicFacet> } */
   const psmPublicFacet = await E(governorCreatorFacet).getPublicFacet();
   const psm = {
-    psmCreatorFacet: psmFacets.psmCreatorFacet,
+    psmCreatorFacet: psmKit.psmCreatorFacet,
     psmPublicFacet,
     instance: governedInstance,
   };
 
   const committeeCreator = await consume.economicCommitteeCreatorFacet;
   const electorateInstance = await instance.consume.economicCommittee;
-  const psmCharterCreatorFacet = await consume.psmCharterCreatorFacet;
+  const { creatorFacet: econCharterCreatorFacet } = await E.get(
+    consume.econCharterKit,
+  );
 
   const poserInvitationP = E(committeeCreator).getPoserInvitation();
   const poserInvitationAmount = await E(
@@ -163,7 +166,7 @@ export const setupPsm = async (
     electorateInstance,
     governor: g,
     psm,
-    psmCharterCreatorFacet,
+    econCharterCreatorFacet,
     invitationAmount: poserInvitationAmount,
     mockChainStorage: space.mockChainStorage,
     space,
