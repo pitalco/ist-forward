@@ -153,6 +153,8 @@ test('zoe - forward to psm', async (t) => {
     IST: await E(localPursePIst).withdraw(giveIstAmount),
   });
 
+  let localAddr = await E(channel).getRemoteAddress();
+
   const userSeat = await E(zoe).offer(
     invitation,
     proposal,
@@ -160,14 +162,13 @@ test('zoe - forward to psm', async (t) => {
     harden({
       remoteDenom: 'KNUT',
       receiver: 'osmo1234567',
+      localAddr: localAddr
     })
   );
   console.log({userSeat})
   // @ts-ignore
-  const { message, result } = await E(userSeat).getOfferResult();
+  const { message } = await E(userSeat).getOfferResult();
   t.is(message, 'Done');
-  const parsedResponse = await parseICS20TransferPacket(result);
-  console.log(parsedResponse);
   const userIstBalanceAfter = await E(localPursePIst).getCurrentAmount();
   console.log("userIstBalanceAfter: ", userIstBalanceAfter.value);
 
