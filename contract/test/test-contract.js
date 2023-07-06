@@ -13,8 +13,7 @@ import {
   makeLoopbackProtocolHandler,
 } from '@agoric/swingset-vat/src/vats/network/index.js';
 import { makePromiseKit } from '@endo/promise-kit';
-import { makeICS20TransferPacket, parseICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
-import { Nat } from '@agoric/nat';
+import { makeICS20TransferPacket } from '@agoric/pegasus/src/ics20.js';
 import { setupPsm } from './setupPsm.js';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer.js';
 import { AmountMath } from '@agoric/ertp';
