@@ -1,0 +1,7 @@
+{
+  "consume": {
+    "contractKits": true,
+    "agoricNames": true,
+    "board": true
+  }
+}
