@@ -10,7 +10,7 @@ const main = async (
   },
 ) => {
   console.log('*** EXECUTING_CORE_EVAL ***');
-  const anchorMintBundleId = "board05970";
+  const anchorMintBundleId = ""; // Needs to be empty string("") when starting
   let anchorMinter;
 
   const [usdcAxlIssuer, kits, anchorMintHolderPF] = await Promise.all([
@@ -29,7 +29,7 @@ const main = async (
 
   await E(anchorMintHolderPF).setAnchorMint(usdcAxlIssuer, anchorMinter);
 
-  console.log('*** MINT_OBJECT_WRITTEN ***');
+  console.log('*** CORE_EVAL_EXECUTED ***');
 };
 
 harden(main)

@@ -1,3 +1,4 @@
+## Replace with your own sdk path
 SDK_ROOT = $(shell cd ../agoric-master >/dev/null && pwd)
 IST_FORWARDER_ROOT = $(shell pwd)
 
@@ -7,8 +8,8 @@ AGCH = "$(SDK_ROOT)/bin/agd"
 GAS_ADJUSTMENT = 1.2
 CHAIN_ID = agoriclocal
 
-EVAL_PERMIT = $(IST_FORWARDER_ROOT)/contract/deploy/psm-permit.json
-EVAL_CODE = $(IST_FORWARDER_ROOT)/contract/deploy/psm-proposal.js
+EVAL_PERMIT = $(IST_FORWARDER_ROOT)/contract/core-eval/psm-permit.json
+EVAL_CODE = $(IST_FORWARDER_ROOT)/contract/core-eval/psm-proposal.js
 EVAL_DEPOSIT = 1000000ubld
 VOTE_PROPOSAL = 1
 VOTE_OPTION = yes
@@ -24,13 +25,13 @@ start-rly:
 	./network/hermes/start.sh
 
 deploy-anchor-mint:
-	$(AGORIC) deploy contract/deploy/deployAnchorMint.js && sleep 3
+	$(AGORIC) deploy contract/core-eval/deployAnchorMint.js && sleep 3
 
 board-id:
-	$(eval ANCHOR_HOLDER_BOARD_ID := $(shell jq '.ANCHOR_HOLDER_PUBLIC_FACET_BOARD_ID' $(IST_FORWARDER_ROOT)/contract/deploy/dappConstants.json))
+	$(eval ANCHOR_HOLDER_BOARD_ID := $(shell jq '.ANCHOR_HOLDER_PUBLIC_FACET_BOARD_ID' $(IST_FORWARDER_ROOT)/contract/core-eval/dappConstants.json))
 
 update-eval:
-	sed -i "" 's_const anchorMintBundleId = \"\";_const anchorMintBundleId = $(ANCHOR_HOLDER_BOARD_ID);_' $(IST_FORWARDER_ROOT)/contract/deploy/psm-proposal.js
+	sed -i "" 's_const anchorMintBundleId = \"\";_const anchorMintBundleId = $(ANCHOR_HOLDER_BOARD_ID);_' $(IST_FORWARDER_ROOT)/contract/core-eval/psm-proposal.js
 
 psm-core-eval:
 	$(AGCH) --home=$(SDK_ROOT)/packages/cosmic-swingset/t1/8000/ag-cosmos-helper-statedir tx gov submit-proposal swingset-core-eval \
