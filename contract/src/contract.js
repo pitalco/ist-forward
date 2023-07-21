@@ -28,6 +28,7 @@ const makePSMForwarder = async (zcf, remoteConnectionId, psm, channel, port, iss
 
   const remoteEndpoint = `/ibc-hop/${remoteConnectionId}/ibc-port/transfer/unordered/ics20-1`;
   const connection = await E(port).connect(remoteEndpoint);
+  console.log("Connection: ", connection);
 
   const makeSendTransferInvitation = () => {
     /** @type OfferHandler */
@@ -88,6 +89,41 @@ const makePSMForwarder = async (zcf, remoteConnectionId, psm, channel, port, iss
     return zcf.makeInvitation(sendTransfer, 'Send Transfer Invitation');
   };
 
+/**
+ * Transfer helper function to transfer an asset through transfer-psm port over IBC on this channel.
+ *
+ * @param {Payment} payment Assets to send
+ * @param {Mint} minter Minter for anchor
+ * @param {string} sender Sender bech32 address from Agoric
+ * @param {string} receiver Receiver address on remote chain
+ *
+ */
+  const transfer = async (payment, minter, sender, receiver) => {
+
+    let issuer = await E(minter).getIssuer();
+    let amount = await issuer.burn(payment);
+    let value = await E(amount).value();
+    /** @type {Brand} */
+    let brand = await E(amount).brand();
+    let denom = await E(brand).getAllegedName();
+
+
+    /** @type {import('@agoric/pegasus/src/ics20').ICS20TransferPacket} */
+    let icsTransfer = {
+      amount: value,
+      denom,
+      sender,
+      receiver,
+      memo: ""
+    }
+
+    let packet = await makeICS20TransferPacket(icsTransfer);
+
+    let ack = await E(connection).send(packet);
+
+    return ack
+  }
+
   return Far('forwarder', {
     /**
      * Swap IST into IBC ERTP asset. Then burn this ERTP asset and send to remote chain.
@@ -101,8 +137,14 @@ const makePSMForwarder = async (zcf, remoteConnectionId, psm, channel, port, iss
       return {
         "localAddress": await E(connection).getLocalAddress(),
         "remoteAddress": await E(connection).getRemoteAddress(),
+        "channel": connection
       }
-    }
+    },
+    /**
+     * Transfer helper function to transfer an asset through transfer-psm port over IBC on this channel.
+     *
+     */
+    transfer
   })
 }
 
@@ -135,6 +177,8 @@ const start = async (zcf, privateArgs) => {
     issuerP,
     brandP,
   ])
+
+  console.log("Adding Listener to Port: ", await E(port).getLocalAddress());
 
   // logic to define our port listener
   await E(port).addListener(
@@ -210,6 +254,8 @@ const start = async (zcf, privateArgs) => {
       },
     }),
   );
+
+  console.log("Added Listener to Port");
 
   return harden({
     publicFacet: await makePSMForwarder(zcf, remoteConnectionId, psm, channel, port, issuer),
