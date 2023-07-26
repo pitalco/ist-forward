@@ -10,7 +10,7 @@ const main = async (
   },
 ) => {
   console.log('*** EXECUTING_CORE_EVAL ***');
-  const anchorMintBundleId = ""; // Needs to be empty string("") when starting
+  const anchorMintBundleId = "board05970"; // Needs to be empty string("") when starting
   let anchorMinter;
 
   const [usdcAxlIssuer, kits, anchorMintHolderPF] = await Promise.all([

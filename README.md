@@ -54,8 +54,17 @@ cd $HOME/ist-forward/contract
 agoric deploy ./deploy.js
 ```
 
-## Start Contract
+## Create A IBC Connection Between Chains
+```bash
+# Once all chains are running create a connection
+rly transact connection agoric-axelar --override
+# Check the connection
+rly query connections agoriclocal
+```
+
+## Start Contract (In Ag-Solo Repl)
 ```javascript
+home.ibcport
 // Get the installation for Contract
 installation = E(home.board).getValue(Installation_ID)
 // Get IST
@@ -64,7 +73,7 @@ istIssuer = E(home.zoe).getFeeIssuer()
 issuer = E(home.agoricNames).lookup("issuer", "USDC_axl")
 // Get anchor mint
 cf = E(home.scratch).get("anchor_mint")
-minter = E(cf).getAnchorMint(history[2])
+minter = E(cf).getAnchorMint(history[3])
 
 // Start the IST Forward instance
 instance = E(home.zoe).startInstance(
@@ -73,15 +82,9 @@ instance = E(home.zoe).startInstance(
         IST: istIssuer,
         Anchor: issuer,
     },
-    { board: home.board, namesByAddress: home.namesByAddress, network: home.network, psm, remoteConnectionId: "connection-0" },
+    { board: home.board, namesByAddress: home.namesByAddress, network: home.network, psm, remoteConnectionId: "connection-0", port: history[0][0] },
     { minter },
 )
-```
-
-## Create A IBC Connection Between Chains
-```bash
-# Once all chains are running create a connection
-rly transact connection agoric-axelar --override
 ```
 
 ## Create A PSM Forwarder
@@ -89,15 +92,6 @@ rly transact connection agoric-axelar --override
 pmf = E(instance.publicFacet).makePSMForwarder(remoteChainConnectionId);
 // Save in scratch
 E(home.scratch).set("ist-forward", pmf)
-```
-
-## Create An IBC Channel with transfer-psm Port
-```bash
-# Once all chains are running create a connection
-rly transact link agoric-axelar --override --src-port transfer --dst-port transfer-psm
-# You can check the channels using
-rly query channels agoriclocal
-rly query channels axelar
 ```
 
 ## Send Fake PSM Anchor Assets To Axelar Through Port

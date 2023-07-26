@@ -47,6 +47,8 @@ test('zoe - forward to psm', async (t) => {
 
     // Create a network protocol to be used for testing
     const network = makeNetworkProtocol(makeLoopbackProtocolHandler());
+    /** @type {Connection} */
+    let remoteChannel;
 
     /**
      * Create the listener for the test port
@@ -65,12 +67,44 @@ test('zoe - forward to psm', async (t) => {
         try {
           return harden({
             async onOpen(c, localAddr, remoteAddr, _connectionHandler) {
-              t.is(localAddr, '/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1/nonce/2');
-              t.is(remoteAddr, '/ibc-port/transfer-psm/nonce/1');
+              t.is(localAddr, '/ibc-port/random/nonce/4');
+              t.is(remoteAddr, '/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1/nonce/3');
               console.log("Connection opened: ", c);
             },
             async onReceive(_c, _packetBytes) {
-              return "pingack";
+              return '{"result":"AQ=="}';
+            },
+          });
+        } catch (err) {
+          throw new Error(err)
+        }
+      },
+    });
+
+    /**
+     * Create the listener for the test port
+     *
+     * @type {ListenHandler}
+     */
+    const listener2 = Far('listener', {
+      async onListen(_p, _listenHandler) {
+        try {
+          return
+        } catch (err) {
+          throw new Error(err)
+        }
+      },
+      async onAccept(_p, _localAddrP, _remoteAddrP, _listenHandler) {
+        try {
+          return harden({
+            async onOpen(c, localAddr, remoteAddr, _connectionHandler) {
+              t.is(localAddr, '/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1/nonce/2');
+              t.is(remoteAddr, '/ibc-port/random/nonce/1');
+              console.log("Connection opened: ", c);
+              remoteChannel = c
+            },
+            async onReceive(_c, _packetBytes) {
+              return '{"result":"AQ=="}';
             },
           });
         } catch (err) {
@@ -80,8 +114,12 @@ test('zoe - forward to psm', async (t) => {
     });
 
     // Create and send packet to our ist forward port from new port
+    const port = await E(network).bind('/ibc-port/random');
+    await port.addListener(listener);
+
+    // Create and send packet to our ist forward port from new port
     const port2 = await E(network).bind('/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1');
-    await port2.addListener(listener);
+    await port2.addListener(listener2);
 
     // create transfer port on connection-0
     /**
@@ -121,30 +159,12 @@ test('zoe - forward to psm', async (t) => {
         Anchor: knut.issuer,
       },
       // @ts-ignore
-      { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, psm, remoteConnectionId: "connection-0" },
+      { board: fakeBoard, namesByAddress: fakeNamesByAddress, network, psm, remoteConnectionId: "connection-0", port },
       { minter },
     );
 
     const info = await E(publicFacet).channelInfo();
     console.log("info: ", info);
-
-    const channel = await E(port2).connect(
-      info.localAddress,
-      Far('opener', {
-        async onOpen(c, localAddr, remoteAddr, _connectionHandler) {
-          try {
-            t.is(localAddr, '/ibc-hop/connection-0/ibc-port/transfer/unordered/ics20-1/nonce/3');
-            t.is(remoteAddr, '/ibc-port/transfer-psm/nonce/1/nonce/4');
-            console.log("Connection opened: ", c);
-          } catch (err) {
-            throw new Error(err)
-          }
-        },
-        async onReceive(_c, _packet, _handler) {
-          return "pingack"
-        },
-      }),
-    );
 
     /** @type {Data} */
     const packet = await makeICS20TransferPacket({
@@ -153,7 +173,8 @@ test('zoe - forward to psm', async (t) => {
       "depositAddress": 'agoric1234567'
     });
     // send a transfer packet
-    const pingack = await channel.send(packet);
+    // @ts-ignore
+    const pingack = await remoteChannel.send(packet);
     console.log("Packet ack: ", pingack);
     t.is(pingack, '{"result":"AQ=="}', 'expected {"result":"AQ=="}');
 
@@ -174,7 +195,8 @@ test('zoe - forward to psm', async (t) => {
       IST: await E(localPursePIst).withdraw(giveIstAmount),
     });
 
-    let localAddr = await E(channel).getRemoteAddress();
+    // @ts-ignore
+    let localAddr = await E(remoteChannel).getRemoteAddress();
 
     const userSeat = await E(zoe).offer(
       invitation,
@@ -189,7 +211,7 @@ test('zoe - forward to psm', async (t) => {
     console.log({userSeat})
     // @ts-ignore
     const { message, result } = await E(userSeat).getOfferResult();
-    t.is(result, 'pingack');
+    t.is(result, '{"result":"AQ=="}');
     t.is(message, 'Done');
     const userIstBalanceAfter = await E(localPursePIst).getCurrentAmount();
     console.log("userIstBalanceAfter: ", userIstBalanceAfter.value);
