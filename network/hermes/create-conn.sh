@@ -6,6 +6,6 @@ set -e
 
 ### Configure the clients and connection
 echo "Initiating connection handshake..."
-hermes --config ./network/hermes/config.toml create connection --a-chain agoriclocal --b-chain osmo-test-4
+hermes --config ./network/hermes/config.toml create connection --a-chain agoriclocal --b-chain devnet-wk
 
 sleep 2

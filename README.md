@@ -54,12 +54,10 @@ cd $HOME/ist-forward/contract
 agoric deploy ./deploy.js
 ```
 
-## Create A IBC Connection Between Chains
+## Setup Hermes Relayer
 ```bash
-# Once all chains are running create a connection
-rly transact connection agoric-axelar --override
-# Check the connection
-rly query connections agoriclocal
+# When prompted for mnemonic, use the mnemonic spit out in `make scenario2-setup` above
+make start-rly
 ```
 
 ## Start Contract (In Ag-Solo Repl)

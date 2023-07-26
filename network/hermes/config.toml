@@ -117,17 +117,17 @@ trust_threshold = { numerator = '1', denominator = '3' }
 address_type = { derivation = 'cosmos' }
 
 [[chains]]
-id = 'osmo-test-4'
-rpc_addr = 'http://35.193.49.115:26657'
-grpc_addr = 'http://35.193.49.115:9090'
-websocket_addr = 'ws://35.193.49.115:26657/websocket'
+id = 'devnet-wk'
+rpc_addr = 'http://afc5d4a439e4a456bafe34c2d9cd955b-182827533.us-east-2.elb.amazonaws.com:26657'
+grpc_addr = 'http://afc5d4a439e4a456bafe34c2d9cd955b-182827533.us-east-2.elb.amazonaws.com:9090'
+websocket_addr = 'ws://afc5d4a439e4a456bafe34c2d9cd955b-182827533.us-east-2.elb.amazonaws.com:26657/websocket'
 rpc_timeout = '10s'
-account_prefix = 'osmo'
-key_name = 'osmo-test-4'
+account_prefix = 'axelar'
+key_name = 'axelar'
 store_prefix = 'ibc'
 default_gas = 100000
 max_gas = 3000000
-gas_price = { price = 0.001, denom = 'uosmo' }
+gas_price = { price = 0.001, denom = 'uwk' }
 max_msg_num = 30
 max_tx_size = 2097152
 clock_drift = '1000s'
