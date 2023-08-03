@@ -95,10 +95,12 @@ brand = E(issuer).getBrand();
 payment = E(purse).withdraw(
     {
         brand,
-        value: 10n
+        value: 10_000_000n
     }
 );
 E(instance.publicFacet).transfer(payment, minter, 'axelar1p4802fzkna9874d4try3qqchf84hmnq9ea8qnc', purse);
+// Get agoric bech32 address for hermes later
+E(home.myAddressNameAdmin).getMyAddress()
 ```
 
 ## Send The Received Assets Back Through Channel To Agoric To Be Turned Into IST
@@ -108,7 +110,7 @@ NOTE: This contract asssumes that there is a PSM for the asset being sent!
 axelard query bank balances axelar1p4802fzkna9874d4try3qqchf84hmnq9ea8qnc --node https://axelartest-rpc.quantnode.tech:443
 
 # Send assets back to agoric to be minted into IST
-hermes --config ./network/hermes/config.toml tx ft-transfer --dst-chain agoriclocal --src-chain axelar-testnet-lisbon-3 --src-port transfer --src-channel channel-292 --amount 10 --denom "ibc/BF993E23C121102147F94B0F2E40BCB6F2F2FCE4A249A24B80E503AA556E082A" --timeout-height-offset 25
+hermes --config ./network/hermes/config.toml tx ft-transfer --dst-chain agoriclocal --src-chain axelar-testnet-lisbon-3 --src-port transfer --src-channel {channel on axelar} --amount 10000000 --denom {denom from above query} --timeout-height-offset 1000 --receiver {your agoric address from above}
 ```
 
 Check your IST balance in your ag-solo and see it increase!
