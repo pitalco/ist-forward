@@ -24,4 +24,4 @@ sleep 1s
 hermes --config ./network/hermes/config.toml keys add --hd-path "m/44'/564'/0'/0/0" --chain agoriclocal --mnemonic-file ./network/hermes/mnemonic.txt --overwrite
 sleep 5s
 
-hermes --config ./network/hermes/config.toml keys add --chain devnet-wk --mnemonic-file ./network/hermes/mnemonic-axelar.txt --overwrite
+hermes --config ./network/hermes/config.toml keys add --chain axelar-testnet-lisbon-3 --mnemonic-file ./network/hermes/mnemonic-axelar.txt --overwrite

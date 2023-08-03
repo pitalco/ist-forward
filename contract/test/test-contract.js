@@ -36,7 +36,7 @@ test('zoe - forward to psm', async (t) => {
     const electorateTerms = { committeeName: 'EnBancPanel', committeeSize: 3 };
     const timer = buildManualTimer(t.log, 0n, { eventLoopIteration });
 
-    const { knut, zoe, psm } =
+    const { knut, zoe, psm: psmM } =
       await setupPsm(t, electorateTerms, timer);
     
     // pack the contract
@@ -151,6 +151,8 @@ test('zoe - forward to psm', async (t) => {
     /** @type {Purse} */
     const localPursePIst = await E(E(zoe).getFeeIssuer()).makeEmptyPurse();
     resolveLocalDepositFacet(E(localPursePIst).getDepositFacet());
+
+    const psm = await E(zoe).getPublicFacet(psmM.instance);
 
     const { publicFacet } = await E(zoe).startInstance(
       installation,

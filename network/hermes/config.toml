@@ -1,137 +1,131 @@
-# The global section has parameters that apply globally to the relayer operation.
 [global]
+log_level = "info"
 
-# Specify the verbosity for the relayer logging output. Default: 'info'
-# Valid options are 'error', 'warn', 'info', 'debug', 'trace'.
-log_level = 'info'
-
-
-# Specify the mode to be used by the relayer. [Required]
-[mode]
-
-# Specify the client mode.
 [mode.clients]
-
-# Whether or not to enable the client workers. [Required]
 enabled = true
-
-# Whether or not to enable periodic refresh of clients. [Default: true]
-# This feature only applies to clients that underlie an open channel.
-# For Tendermint clients, the frequency at which Hermes refreshes them is 2/3 of their
-# trusting period (e.g., refresh every ~9 days if the trusting period is 14 days).
-# Note: Even if this is disabled, clients will be refreshed automatically if
-#      there is activity on a connection or channel they are involved with.
 refresh = true
+misbehaviour = true
 
-# Whether or not to enable misbehaviour detection for clients. [Default: false]
-misbehaviour = false
-
-# Specify the connections mode.
 [mode.connections]
-
-# Whether or not to enable the connection workers for handshake completion. [Required]
 enabled = true
 
-# Specify the channels mode.
 [mode.channels]
-
-# Whether or not to enable the channel workers for handshake completion. [Required]
 enabled = true
 
-# Specify the packets mode.
 [mode.packets]
-
-# Whether or not to enable the packet workers. [Required]
 enabled = true
-
-# Parametrize the periodic packet clearing feature.
-# Interval (in number of blocks) at which pending packets
-# should be periodically cleared. A value of '0' will disable
-# periodic packet clearing. [Default: 100]
 clear_interval = 100
-
-# Whether or not to clear packets on start. [Default: false]
 clear_on_start = true
-
-# Toggle the transaction confirmation mechanism.
-# The tx confirmation mechanism periodically queries the `/tx_search` RPC
-# endpoint to check that previously-submitted transactions
-# (to any chain in this config file) have been successfully delivered.
-# If they have not been, and `clear_interval = 0`, then those packets are
-# queued up for re-submission.
-# If set to `false`, the following telemetry metrics will be disabled:
-# `acknowledgment_packets_confirmed`, `receive_packets_confirmed` and `timeout_packets_confirmed`.
-# [Default: false]
 tx_confirmation = false
+auto_register_counterparty_payee = false
 
-# The REST section defines parameters for Hermes' built-in RESTful API.
-# https://hermes.informal.systems/rest.html
 [rest]
-
-# Whether or not to enable the REST service. Default: false
-enabled = true
-
-# Specify the IPv4/6 host over which the built-in HTTP server will serve the RESTful
-# API requests. Default: 127.0.0.1
-host = '127.0.0.1'
-
-# Specify the port over which the built-in HTTP server will serve the restful API
-# requests. Default: 3000
+enabled = false
+host = "127.0.0.1"
 port = 3000
 
-
-# The telemetry section defines parameters for Hermes' built-in telemetry capabilities.
-# https://hermes.informal.systems/telemetry.html
 [telemetry]
-
-# Whether or not to enable the telemetry service. Default: false
 enabled = false
-
-# Specify the IPv4/6 host over which the built-in HTTP server will serve the metrics
-# gathered by the telemetry service. Default: 127.0.0.1
-host = '127.0.0.1'
-
-# Specify the port over which the built-in HTTP server will serve the metrics gathered
-# by the telemetry service. Default: 3001
+host = "127.0.0.1"
 port = 3001
 
-[[chains]]
-id = 'agoriclocal'
-rpc_addr = 'http://127.0.0.1:26657'
-grpc_addr = 'http://127.0.0.1:9090'
-websocket_addr = 'ws://127.0.0.1:26657/websocket'
-rpc_timeout = '10s'
-account_prefix = 'agoric'
-key_name = 'rly1'
-store_prefix = 'ibc'
-default_gas = 100000
-max_gas = 3000000
-gas_price = { price = 0.001, denom = 'ubld' }
-max_msg_num = 30
-max_tx_size = 2097152
-gas_multiplier = 1.1
-clock_drift = '5s'
-max_block_time = '10s'
-trusting_period = '14days'
-trust_threshold = { numerator = '1', denominator = '3' }
-address_type = { derivation = 'cosmos' }
+[telemetry.buckets.latency_submitted]
+start = 500
+end = 20000
+buckets = 10
+
+[telemetry.buckets.latency_confirmed]
+start = 1000
+end = 30000
+buckets = 10
 
 [[chains]]
-id = 'devnet-wk'
-rpc_addr = 'http://afc5d4a439e4a456bafe34c2d9cd955b-182827533.us-east-2.elb.amazonaws.com:26657'
-grpc_addr = 'http://afc5d4a439e4a456bafe34c2d9cd955b-182827533.us-east-2.elb.amazonaws.com:9090'
-websocket_addr = 'ws://afc5d4a439e4a456bafe34c2d9cd955b-182827533.us-east-2.elb.amazonaws.com:26657/websocket'
-rpc_timeout = '10s'
-account_prefix = 'axelar'
-key_name = 'axelar'
-store_prefix = 'ibc'
+id = "axelar-testnet-lisbon-3"
+type = "CosmosSdk"
+rpc_addr = "https://axelartest-rpc.quantnode.tech/"
+grpc_addr = "http://axelartest-grpc.quantnode.tech:9090/"
+rpc_timeout = "10s"
+trusted_node = false
+account_prefix = "axelar"
+key_name = "axelar"
+key_store_type = "Test"
+store_prefix = "ibc"
 default_gas = 100000
-max_gas = 3000000
-gas_price = { price = 0.001, denom = 'uwk' }
+max_gas = 400000
+gas_multiplier = 1.1
 max_msg_num = 30
-max_tx_size = 2097152
-clock_drift = '1000s'
-max_block_time = '10s'
-trusting_period = '1days'
-trust_threshold = { numerator = '1', denominator = '3' }
-address_type = { derivation = 'cosmos' }
+max_tx_size = 180000
+max_grpc_decoding_size = 33554432
+clock_drift = "5s"
+max_block_time = "30s"
+ccv_consumer_chain = false
+memo_prefix = ""
+sequential_batch_tx = false
+
+[chains.event_source]
+mode = "push"
+url = "wss://axelartest-rpc.quantnode.tech/websocket"
+batch_delay = "500ms"
+
+[chains.trust_threshold]
+numerator = "1"
+denominator = "3"
+
+[chains.gas_price]
+price = 0.025
+denom = "uaxl"
+
+[chains.packet_filter]
+policy = "deny"
+list = []
+
+[chains.packet_filter.min_fees]
+
+[chains.address_type]
+derivation = "cosmos"
+
+[[chains]]
+id = "agoriclocal"
+type = "CosmosSdk"
+rpc_addr = "http://127.0.0.1:26657/"
+grpc_addr = "http://127.0.0.1:9090"
+rpc_timeout = "10s"
+trusted_node = false
+account_prefix = "agoric"
+key_name = "rly1"
+key_store_type = "Test"
+store_prefix = "ibc"
+default_gas = 100000
+max_gas = 400000
+gas_multiplier = 1.1
+max_msg_num = 30
+max_tx_size = 180000
+max_grpc_decoding_size = 33554432
+clock_drift = "5s"
+max_block_time = "30s"
+ccv_consumer_chain = false
+memo_prefix = ""
+sequential_batch_tx = false
+
+[chains.event_source]
+mode = "push"
+url = "ws://127.0.0.1:26657/websocket"
+batch_delay = "500ms"
+
+[chains.trust_threshold]
+numerator = "1"
+denominator = "3"
+
+[chains.gas_price]
+price = 0.025
+denom = "ubld"
+
+[chains.packet_filter]
+policy = "deny"
+list = []
+
+[chains.packet_filter.min_fees]
+
+[chains.address_type]
+derivation = "cosmos"
+

@@ -16,7 +16,7 @@ chains:
             gas-adjustment: 1.2
             gas-prices: 0.01uist
             min-gas-amount: 0
-            debug: false
+            debug: true
             timeout: 20s
             block-timeout: ""
             output-format: json
@@ -36,7 +36,7 @@ chains:
             gas-adjustment: 1.2
             gas-prices: 0.01uwk
             min-gas-amount: 0
-            debug: false
+            debug: true
             timeout: 20s
             block-timeout: ""
             output-format: json

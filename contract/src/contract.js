@@ -21,7 +21,7 @@ import { offerTo } from '@agoric/zoe/src/contractSupport/zoeHelpers.js';
  * @param {ERef<BoardDepositFacet>} board the Board
  * @param {ERef<NameHub>} namesByAddress the name board
  * @param {String} remoteConnectionId connection id to create channel on
- * @param {Object} psm PSM instance to create channel for
+ * @param {Object} psm PSM public facet to create channel for
  * @param {MapStore<String,Object>} channel Channel storage object
  * @param {Port} port Port to create the channel on
  * @param {Mint} minter Minter for PSM for this channel
@@ -59,7 +59,7 @@ const makePSMForwarder = async (zcf, zoe, board, namesByAddress, remoteConnectio
       try {
         // swap in the PSM for IST
         // @ts-ignore
-        const invitation  = await E(psm.psmPublicFacet).makeWantMintedInvitation();  
+        const invitation  = await E(psm).makeWantMintedInvitation();  
         const giveAnchorAmount = AmountMath.make(brand, Nat(Number(value)));
 
         /** @type {Proposal} */
@@ -121,7 +121,7 @@ const makePSMForwarder = async (zcf, zoe, board, namesByAddress, remoteConnectio
         remoteDenom, receiver, localAddr
       } = offerArgs;
 
-      const invitation  = E(psm.psmPublicFacet).makeGiveMintedInvitation();
+      const invitation  = E(psm).makeGiveMintedInvitation();
       const { zcfSeat: tempSeat, userSeat: tempUserSeatP } = zcf.makeEmptySeatKit();
 
       const { deposited } = await offerTo(
@@ -172,34 +172,41 @@ const makePSMForwarder = async (zcf, zoe, board, namesByAddress, remoteConnectio
  *
  * @param {Payment} payment Assets to send
  * @param {Mint} minter Minter for anchor
- * @param {string} sender Sender bech32 address from Agoric
  * @param {string} receiver Receiver address on remote chain
+ * @param {Purse} purse The refund purse
  *
  */
-  const transfer = async (payment, minter, sender, receiver) => {
+  const transfer = async (payment, minter, receiver, purse) => {
 
     let issuer = await E(minter).getIssuer();
-    let amount = await issuer.burn(payment);
-    let value = await E(amount).value();
-    /** @type {Brand} */
-    let brand = await E(amount).brand();
-    let denom = await E(brand).getAllegedName();
+    let amount = await E(issuer).burn(payment);
 
+    try {
 
-    /** @type {import('@agoric/pegasus/src/ics20').ICS20TransferPacket} */
-    let icsTransfer = {
-      amount: value,
-      denom,
-      sender,
-      receiver,
-      memo: "IST Forwarder Burn"
+      let denom = await E(amount.brand).getAllegedName();
+
+      let icsTransfer = {
+        value: amount.value,
+        remoteDenom: denom,
+        depositAddress: receiver
+      }
+
+      let packet = await makeICS20TransferPacket(icsTransfer);
+
+      let ack = await E(connection).send(packet);
+
+      return ack
+
+    } catch (err) {
+
+      // If failed re-mint and deposit back funds in refund purse
+      let refund = await E(minter).mintPayment(amount);
+      await E(purse).deposit(refund);
+
+      console.error(err);
+      throw err;
+
     }
-
-    let packet = await makeICS20TransferPacket(icsTransfer);
-
-    let ack = await E(connection).send(packet);
-
-    return ack
   }
 
   return Far('forwarder', {

@@ -19,10 +19,7 @@ ANCHOR_HOLDER_BOARD_ID="dummy"
 start-rly:
 	@echo "Initializing relayer..." 
 	./network/hermes/restore-keys.sh
-	./network/hermes/rly-setup.sh
 	./network/hermes/create-conn.sh
-	@echo "Starting relayer..." 
-	./network/hermes/start.sh
 
 deploy-anchor-mint:
 	$(AGORIC) deploy contract/core-eval/deployAnchorMint.js && sleep 3

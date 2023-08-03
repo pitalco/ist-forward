@@ -18,18 +18,21 @@ agoric install
 ```bash
 cd $HOME/agoric-sdk/packages/cosmic-swingset
 make scenario2-setup
-# Look for the bootstrap key mnemonic in the command output marked with **Important**. We need this for next commands
-# Lets restore relayer keys
-cd $HOME/axelar-transfer
-rm -r $HOME/.relayer
-cp -r ./network/.relayer $HOME/.relayer
-rly keys restore agoriclocal agoric "<bootstrap key mnemonic from above>"
+# Look for the bootstrap key mnemonic in the command output marked with **Important**. We need this for relayer commands below
 # Run the chain
 cd $HOME/agoric-sdk/packages/cosmic-swingset
 make scenario2-run-chain
 # Run the client in ANOTHER terminal
 cd $HOME/agoric-sdk/packages/cosmic-swingset
 make scenario2-run-client
+```
+
+## Setup & Start Relayer
+```bash
+# Input the mnemonic from above when prompted to
+cd $HOME/ist-forward
+make start-rly
+hermes --config ./network/hermes/config.toml start
 ```
 
 # Make PSM Minter for Testing
@@ -54,12 +57,6 @@ cd $HOME/ist-forward/contract
 agoric deploy ./deploy.js
 ```
 
-## Setup Hermes Relayer
-```bash
-# When prompted for mnemonic, use the mnemonic spit out in `make scenario2-setup` above
-make start-rly
-```
-
 ## Start Contract (In Ag-Solo Repl)
 ```javascript
 home.ibcport
@@ -73,6 +70,10 @@ issuer = E(home.agoricNames).lookup("issuer", "USDC_axl")
 cf = E(home.scratch).get("anchor_mint")
 minter = E(cf).getAnchorMint(history[3])
 
+// Get PSM
+instance = E(home.agoricNames).lookup('instance', 'psm-IST-USDC_axl')
+psm = E(home.zoe).getPublicFacet(instance)
+
 // Start the IST Forward instance
 instance = E(home.zoe).startInstance(
     installation,
@@ -85,24 +86,29 @@ instance = E(home.zoe).startInstance(
 )
 ```
 
-## Create A PSM Forwarder
-```javascript
-pmf = E(instance.publicFacet).makePSMForwarder(remoteChainConnectionId);
-// Save in scratch
-E(home.scratch).set("ist-forward", pmf)
-```
-
 ## Send Fake PSM Anchor Assets To Axelar Through Port
 This is only needed for testing purposes (FYI)!
 ```javascript
+// Send ERTP assets through IBC via Pegasus
+purse = E(home.wallet).getPurse("USD Coin");
+brand = E(issuer).getBrand();
+payment = E(purse).withdraw(
+    {
+        brand,
+        value: 10n
+    }
+);
+E(instance.publicFacet).transfer(payment, minter, 'axelar1p4802fzkna9874d4try3qqchf84hmnq9ea8qnc', purse);
 ```
 
 ## Send The Received Assets Back Through Channel To Agoric To Be Turned Into IST
 NOTE: This contract asssumes that there is a PSM for the asset being sent!
 ```bash
 # Query the balance to see the IBC Hash denom created
-rly query balance axelar
-rly transact transfer axelar agoriclocal 1000000{ibc denom from balance query above} {agoric address from above} {channel-id from above} --path agoric-axelar
+axelard query bank balances axelar1p4802fzkna9874d4try3qqchf84hmnq9ea8qnc --node https://axelartest-rpc.quantnode.tech:443
+
+# Send assets back to agoric to be minted into IST
+hermes --config ./network/hermes/config.toml tx ft-transfer --dst-chain agoriclocal --src-chain axelar-testnet-lisbon-3 --src-port transfer --src-channel channel-292 --amount 10 --denom "ibc/BF993E23C121102147F94B0F2E40BCB6F2F2FCE4A249A24B80E503AA556E082A" --timeout-height-offset 25
 ```
 
 Check your IST balance in your ag-solo and see it increase!
