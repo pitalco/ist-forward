@@ -3,7 +3,7 @@
 This contract takes IBC assets via IBC transfers, and on an IBC transfer to the port transfer-psm turns the asset received into IST utilizing PSM contract. Once the asset is IST it then forwards the IST to the address specified.
 
 ## Getting Started
-You will need to have NodeJS, Agoric SDK and IBC Golang Relayer installed to get started.
+You will need to have NodeJS, Agoric SDK and IBC Hermes Relayer (https://hermes.informal.systems/quick-start/installation.html) installed to get started.
 
 ## NOTE
 You have to use a patched SDK here https://github.com/pitalco/agoric-sdk/tree/fix-vibc. These patches will be applied to Mainnet-b in next upgrade.
