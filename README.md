@@ -5,6 +5,9 @@ This contract takes IBC assets via IBC transfers, and on an IBC transfer to the 
 ## Getting Started
 You will need to have NodeJS, Agoric SDK and IBC Golang Relayer installed to get started.
 
+## NOTE
+You have to use a patched SDK here https://github.com/pitalco/agoric-sdk/tree/fix-vibc. These patches will be applied to Mainnet-b in next upgrade.
+
 ## Installation & Setup
 ```bash
 cd $HOME
