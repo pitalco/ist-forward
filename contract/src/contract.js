@@ -79,9 +79,7 @@ const makePSMForwarder = async (zcf, zoe, board, namesByAddress, remoteConnectio
           // send the IST to the depositAddress
           // Look up the deposit facet for this board address, if there is one.
           /** @type {DepositFacet} */
-          const depositFacet = await E(board)
-            .getValue(depositAddress)
-            .catch(async _ => await E(namesByAddress).lookup(depositAddress, 'depositFacet'));
+          const depositFacet = await E(namesByAddress).lookup(depositAddress, 'depositFacet');
 
           await E(depositFacet)
           .receive(payout)

@@ -19,9 +19,9 @@ touch ./network/hermes/mnemonic.txt
 echo $mnemonic > ./network/hermes/mnemonic.txt
 
 ### Sleep is needed otherwise the relayer crashes when trying to init
-sleep 1s
+sleep 1
 ### Restore Keys
 hermes --config ./network/hermes/config.toml keys add --hd-path "m/44'/564'/0'/0/0" --chain agoriclocal --mnemonic-file ./network/hermes/mnemonic.txt --overwrite
-sleep 5s
+sleep 5
 
 hermes --config ./network/hermes/config.toml keys add --chain axelar-testnet-lisbon-3 --mnemonic-file ./network/hermes/mnemonic-axelar.txt --overwrite
