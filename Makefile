@@ -28,7 +28,7 @@ board-id:
 	$(eval ANCHOR_HOLDER_BOARD_ID := $(shell jq '.ANCHOR_HOLDER_PUBLIC_FACET_BOARD_ID' $(IST_FORWARDER_ROOT)/contract/core-eval/dappConstants.json))
 
 update-eval:
-	sed -i 's|const anchorMintBundleId = "";|const anchorMintBundleId = "'"$(ANCHOR_HOLDER_BOARD_ID)"'";|' $(HOME)/ist-forward/contract/core-eval/psm-proposal.js
+	sed -i '' 's|const anchorMintBundleId = "";|const anchorMintBundleId = "'"$(ANCHOR_HOLDER_BOARD_ID)"'";|' $(IST_FORWARDER_ROOT)/contract/core-eval/psm-proposal.js
 
 psm-core-eval:
 	$(AGCH) --home=$(SDK_ROOT)/packages/cosmic-swingset/t1/8000/ag-cosmos-helper-statedir tx gov submit-proposal swingset-core-eval \

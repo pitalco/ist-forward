@@ -5,6 +5,8 @@ This contract takes IBC assets via IBC transfers, and on an IBC transfer to the 
 ## Getting Started
 You will need to have NodeJS, Agoric SDK and IBC Hermes Relayer (https://hermes.informal.systems/quick-start/installation.html) installed to get started.
 
+> Note: At the time of writing this doc, the latest version of `hermes` is v1.6 which we used for our tests.
+
 ## NOTE
 You have to use a patched SDK here https://github.com/pitalco/agoric-sdk/tree/fix-vibc. These patches will be applied to Mainnet-b in next upgrade.
 
@@ -39,6 +41,13 @@ hermes --config ./network/hermes/config.toml start
 ```
 
 # Make PSM Minter for Testing
+Make sure you replace the default sdk path with your own `agoric-sdk` path in the [Makefile](./Makefile)'s first line:
+```makefile
+## Replace with your own sdk path
+SDK_ROOT = $(shell cd ../agoric-sdk >/dev/null && pwd)
+```
+
+When you make sure `SDK_ROOT` is pointing to the right sdk directory, you're good to go:
 ```bash
 cd $HOME/ist-forward
 make psm-mint
